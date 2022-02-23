@@ -29,3 +29,9 @@ There's about a handful of projects using the digital edition platform, but this
 ### 3. a) replaces_xslt.py
 This script transforms XML documents into HTML for the project's website. The site has several different text types that all have their one transformation. This one works only for text type "est" (established text, or reading text on the digital edition platform). The reading text is the main version of a text and meant to be easy to read, ignoring a lot of manuscript features. This version of the script produces HTML specific to the platform. In the long run, all HTML on the site needs refactoring in order to be i.e. more accessible, but until now priority nr 1 for me has been to just get the transformation to produce a sensible result that works well enough. Also, this script is for easy testing; the script for the site is slightly different but the transformation is the same. It just doesn't fetch and output files in the same way.
 
+### 3. b) transform_ms.py
+This transformation works only for text type "ms" (manuscript/transcription on the digital edition platform). The transcription is the original version of a text, a manuscript. It has some specific manuscript features, such as deletions and additions to the text being shown (deletions are not present in the reading text column). Apart from that, it's the same as above.
+
+### 3. c) transform_ms_normalized.py
+This transformation works only for text type "ms normalized" (normalized manuscript/transcription on the digital edition platform). The transcription is the original version of a text, a manuscript. But this view of it shows the final stage of all changes made to the text by the author, such as deleted text being actually deleted and not visible. Apart from that, it's the same as above.
+
