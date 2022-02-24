@@ -41,3 +41,11 @@ This transformation works only for text type "ms" (manuscript/transcription on t
 ### 3. c) transform_ms_normalized.py
 This transformation works only for text type "ms normalized" (normalized manuscript/transcription on the digital edition platform). The transcription is the original version of a text, a manuscript. But this view of it shows the final stage of all changes made to the text by the author, such as deleted text being actually deleted and not visible. Apart from that, it's the same as above.
 
+## 4. Find out the length of the text content in XML files
+I construct all XML files in this project using scripts in my repo database_population. The file names contain the publication_id, which is the main identifier for texts, and also the language of the file content. The main directories are named after the different types of texts, and subdirectories after e.g. the correspondant or newspaper. All files contain a template. Editors can add content to any file they choose at any time.
+
+The project needed a way of keeping statistics of the thousands of texts: how many texts are there in each language, how long is each text, how many pages of text are there within each category, and which texts are still missing from the repo (meaning that the files have no other content than the template)? When many collaborators continuously work on the texts, it's hard to keep up with what letter was possibly left untranslated last month. As a publishing project, it's also important to be able to calculate the estimated number of printed pages for a given subset of texts. In the Oxygen XML Editor you can count words and characters of an XML file without the tags, but obviously you wouldn't do that on a large scale. That's what I use this script for.
+
+### 4. a) content_length_and_statistics.py
+This script measures the content length of each file in the repo by counting the characters in the human-readable text (the content of the tags), using Beautiful Soup. The script combines the content length with data from the database and outputs ordered CSV:s containing info about each text. By organizing the data as pivot tables in Excel I get
+nice statistics over the project's texts.
