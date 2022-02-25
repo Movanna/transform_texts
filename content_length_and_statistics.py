@@ -24,6 +24,8 @@
 # a certain text would be were it to be printed, without
 # keeping lists themselves or updating a list each time they've
 # finished a text.
+#
+# Sample output last in file.
 
 from pathlib import Path
 import psycopg2
@@ -192,3 +194,14 @@ def main():
     write_list_to_csv(stats_list_2, "documents/statistik/stats_list_2.csv")
 
 main()
+
+
+'''
+Sample output. See function construct_list for a legend for the values.
+589;2;fi;1861-12-20;20.12.1861 Kronikka.;4714;1.9;Artiklar;Barometern;;https://digital_publishing_project/publication/1/text/589/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Artiklar/Barometern/1861_12_20_Kronika/1861_12_20_Kronika_fi_589.xml;
+589;2;sv;1861-12-20;20.12.1861 Krönika.;4360;1.7;Artiklar;Barometern;;https://digital_publishing_project/publication/1/text/589/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Artiklar/Barometern/1861_12_20_Kronika/1861_12_20_Kronika_sv_589.xml;
+509;2;de;1861-03-25;25.3.1861 Lilly Steven-Steinheil–LM;7933;3.2;Brev;Mottaget;Steven_Steinheil_Lilly;https://digital_publishing_project/publication/1/text/509/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Brev/Mottaget/Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly_de_509.xml;
+509;2;fi;1861-03-25;25.3.1861 Lilly Steven-Steinheil–LM;0;0;Brev;Mottaget;Steven_Steinheil_Lilly;https://digital_publishing_project/publication/1/text/509/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Brev/Mottaget/Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly_fi_509.xml;
+509;2;sv;1861-03-25;25.3.1861 Lilly Steven-Steinheil–LM;7221;2.9;Brev;Mottaget;Steven_Steinheil_Lilly;https://digital_publishing_project/publication/1/text/509/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Brev/Mottaget/Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly_sv_509.xml;
+1191;1;sv;1856-11-24;24.11.1856 D. 24 Nov. Ändtligen är jag då 17 år!;2172;0.9;Biographica;;;https://digital_publishing_project/publication/1/text/1191/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Biographica/1856_11_24_D_24_Nov_Andtligen_ar_jag_da_17_ar/1856_11_24_D_24_Nov_Andtligen_ar_jag_da_17_ar_sv_1191.xml;
+'''
