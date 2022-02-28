@@ -18,7 +18,7 @@ Because **the XML files created by the project are the base for both the web sit
 An XML to XML transformation using Beautiful Soup. Tags, attributes and values are transformed. Also a lot of string replacement with re and replace in order to firstly get rid of tabs, extra spaces and newlines, then add newlines as preferred and finally fix common text problems caused by OCR programs, editors or otherwise present in the source files.
 
 ## 2. Transform an EPUB to XML
-Google Book has digitized a lot of obscure 19th century books that are really hard to find anywhere else. Just what this project needs! However, the EPUBs are messy and the content is of course in many different files. In this project, each text consists of just one file. This script **gets the EPUB files in the right order and outputs a single file of nice XML**.
+Google Book has digitized a lot of obscure 19th century books that are really hard to find anywhere else. Just what this project needs! However, the EPUBs are messy and the content is of course divided into many different files. In this project, each text consists of just one file. This script **gets the EPUB files in the right order and outputs a single file of nice XML**.
 
 ### 2. a) transform_epub.py
 This script transforms a Google Books EPUB into a single XML document, transforms the tags using Beautiful Soup and gets rid of unnecessary clutter and useless info. The string replacement is similar to the one in the previous script.
