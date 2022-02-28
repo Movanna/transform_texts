@@ -5,6 +5,7 @@ import re
 import os
 from bs4 import BeautifulSoup
 import html
+import copy
 
 SOURCE_FOLDER = "documents/xml"
 OUTPUT_FOLDER = "documents/html"
@@ -114,11 +115,23 @@ def transform_tags(html_soup):
                 # the top div value
                 if div_type_value == "LM_written" or div_type_value == "LM_discussion" or div_type_value == "written" or div_type_value == "discussion":
                     div_type_value = "hansard"
+                # transform footnotes separately for each <div>
+                # so that we can have different footnote lists
+                # one list per <div>
+                for child in element.children:
+                    if child.name == "div" and "type" in child.attrs:
+                        transform_footnotes(child)
+                    else:
+                        transform_footnotes(html_soup)
     # transform <p> 
     elements = html_soup.find_all("p")
     if len(elements) > 0:
         p_number = 0
         for element in elements:
+            # no need to transform these <p>:s; they are footnotes and
+            # have already been transformed into html
+            if element.parent.name == "li" or element.parent.name == "section":
+                continue
             # no need to check for the following unless a letter
             if div_type_value == "letter":
             # first paragraph in a letter after the opener
@@ -367,36 +380,15 @@ def transform_tags(html_soup):
             language_span.insert(0, element.get("xml:lang"))
             element.insert_after(language_span)
             del element["xml:lang"]
-    # transform <note>
+    # transform <note> if it's not a footnote but is used for
+    # editors' explanations
+    # footnotes were already transformed in
+    # function transform_footnotes
     elements = html_soup.find_all("note")
     if len(elements) > 0:
         for element in elements:
-            # transform footnotes
-            if ("id" and "n") in element.attrs:
-                element.name = "span"
-                note_content = element.get_text()
-                element.clear()
-                element["class"] = ["footnoteindicator"]
-                element["class"].append("tooltiptrigger")
-                element["class"].append("ttFoot")
-                # this should be @data-id, but the platform adds
-                # the "data-"-part
-                note_id = element.get("id")
-                element.insert(0, element.get("n"))
-                del element["n"]
-                comment_outer_span = html_soup.new_tag("span")
-                comment_outer_span["class"] = ["tooltip"]
-                comment_outer_span["class"].append("ttFoot")
-                comment_inner_span = html_soup.new_tag("span")
-                comment_inner_span["class"] = "ttFixed"
-                # this should be @data-id, but the platform adds
-                # the "data-"-part
-                comment_inner_span["id"] = note_id
-                comment_inner_span.string = note_content
-                comment_outer_span.insert(0, comment_inner_span)
-                element.insert_after(comment_outer_span)
-            # transform editors' explanations
-            else:
+            # editors' explanations have no attributes
+            if element.attrs == {}:
                 element.name = "img"
                 element["class"] = ["tooltiptrigger"]
                 element["class"].append("comment")
@@ -572,6 +564,83 @@ def transform_tags(html_soup):
     html_string = search_string.sub(r"\1", html_string)
     print("We have new soup.")
     return html_string
+
+def transform_footnotes(html_soup):
+    # transform footnotes
+    # a footnote will be transformed twice;
+    # once for the tooltip and once for a list
+    # of footnotes at the end of each text div
+    # <note> tags other than footnotes are transformed
+    # directly in transform_tags
+    elements = html_soup.find_all("note")
+    if len(elements) > 0:
+        note_number = 0
+        for element in elements:
+            if ("id" and "n") in element.attrs:
+                # we need to keep a copy of the original <note>
+                # for the second transformation
+                original_element = copy.deepcopy(element)
+                # this is the tooltip transformation
+                element.name = "span"
+                note_content = element.get_text()
+                element.clear()
+                element["class"] = ["footnoteindicator"]
+                element["class"].append("tooltiptrigger")
+                element["class"].append("ttFoot")
+                # this should be @data-id, but the platform adds
+                # the "data-"-part
+                note_id = element.get("id")
+                note_symbol = element.get("n")
+                element.insert(0, note_symbol)
+                del element["n"]
+                comment_outer_span = html_soup.new_tag("span")
+                comment_outer_span["class"] = ["tooltip"]
+                comment_outer_span["class"].append("ttFoot")
+                comment_inner_span = html_soup.new_tag("span")
+                comment_inner_span["class"] = "ttFixed"
+                # this should be @data-id, but the platform adds
+                # the "data-"-part
+                comment_inner_span["id"] = note_id
+                comment_inner_span.string = note_content
+                comment_outer_span.insert(0, comment_inner_span)
+                element.insert_after(comment_outer_span)
+                # this is the footnote list transformation:
+                # <section><p></p><ol><li><p><a></a></p></li></ol></section>
+                # if this is the first note in this <div>:
+                # create the section and the list
+                if note_number == 0:
+                    note_section = html_soup.new_tag("section")
+                    note_section["role"] = "doc-endnotes"
+                    for tag in original_element.parents:
+                        if tag.name == "div":
+                            html_soup.div.append(note_section)
+                            break
+                    # choose a heading for the list of notes
+                    note_heading = html_soup.new_tag("p")
+                    note_heading.string = "Noter"
+                    note_heading["class"] = "noIndent"
+                    note_section.append(note_heading)
+                    note_section.append("\n")
+                    note_list = html_soup.new_tag("ol")
+                    note_list["class"] = "footnotesList"
+                    note_section.append(note_list)
+                    note_list.append("\n")
+                note = html_soup.new_tag("li")
+                note["id"] = note_id
+                note["class"] = "footnoteItem"
+                note_list.append(note)
+                original_element.name = "p"
+                original_element.attrs = {}
+                original_element["class"] = "noIndent"
+                note_reference = html_soup.new_tag("a")
+                note_reference["class"] = ["xreference"]
+                note_reference["class"].append("footnoteReference")
+                note_reference["href"] = "#" + note_id
+                note_reference["role"] = "doc-backlink"
+                note_reference.append(note_symbol)
+                original_element.insert(0, note_reference)
+                note.append(original_element)
+                note_number += 1
 
 # delete paragraphs that have no content
 def prevent_empty_paragraphs(html_soup):
