@@ -30,6 +30,8 @@ There's a handful of projects using the digital edition platform, but this is th
 
 These scripts **produce HTML specific to the platform**. In the long run, all HTML on the site needs refactoring in order to e.g. improve accessibility, but until now priority nr 1 for me has been to just get the transformation to produce a sensible result that works well enough. Also, these scripts are **written for easy testing without involving the platform**: XML file in, HTML file out, inspect the result. The scripts for the site are slightly different but the transformation is the same, they just don't fetch and output files in the same way when part of a larger process.
 
+**Tasks handled by these scripts include**: finding footnotes in the text and transforming them into tooltips, as well as listing all the notes for each part of the text as a separate note section at the end of that part. Checking for first paragraphs in sections and making sure they're not indented. Producing lots of different tooltips with varying content. Deleting paragraphs that are empty (as a result of getting rid of deleted text, or otherwise present in the source files). Dealing with space issues.
+
 ### 3. a) replaces_xslt.py
 This script transforms XML documents into HTML for the project's website. The site has several different text types that all have their own transformation. This one works only for text type "est" (established text, or reading text on the digital edition platform). The reading text is the main version of a text and is meant to be easy to read, incorporating manuscript features seamlessly into the text without highlighting them.
 
