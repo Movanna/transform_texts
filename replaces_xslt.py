@@ -150,7 +150,7 @@ def transform_tags(html_soup):
                     empty_content.append("Ingen lästext.")
                     element.append(empty_content)
                 else:
-                    transform_footnotes(html_soup)                    
+                    transform_footnotes(notes, html_soup)                    
             else:
                 element.unwrap()
     # transform <p> 

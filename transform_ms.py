@@ -122,7 +122,7 @@ def transform_tags(html_soup):
                     empty_content.append("Ingen transkription.")
                     element.append(empty_content)
                 else:
-                    transform_footnotes(html_soup)                    
+                    transform_footnotes(notes, html_soup)                    
             # <div> should always have @type, otherwise I have
             # no idea what it stands for and can't do anything
             # with it
