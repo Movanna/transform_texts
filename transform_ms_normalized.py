@@ -369,6 +369,7 @@ def transform_tags(html_soup):
             if "type" in element.attrs:
                 del element["type"]
                 element.name = "span"
+                element.clear()
                 element["class"] = ["gap"]
                 element["class"].append("tooltiptrigger")
                 element["class"].append("ttMs")
