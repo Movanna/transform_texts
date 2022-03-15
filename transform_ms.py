@@ -362,7 +362,27 @@ def transform_tags(html_soup):
     elements = html_soup.find_all("supplied")
     if len(elements) > 0:
         for element in elements:
-            element.decompose()
+            # supplied with @type="gap" is used when the editor
+            # can guess what it said, and wants the ms to have
+            # a gap and the reading text to contain the guess
+            # thus, this should be shown just as gap in an ms
+            if "type" in element.attrs:
+                del element["type"]
+                element.name = "span"
+                element["class"] = ["gap"]
+                element["class"].append("tooltiptrigger")
+                element["class"].append("ttMs")
+                explanatory_span = html_soup.new_tag("span")
+                explanatory_span["class"] = ["tooltip"]
+                explanatory_span["class"].append("ttMs")
+                # insert explanatory text in tooltip span
+                explanatory_span.insert(0, "oläsligt")
+                element.insert(0, "[...]")
+                element.insert_after(explanatory_span)
+            # normal supplied should not be present in ms
+            # since it contains an editor's additions to the text
+            else:
+                element.decompose()
     # transform <xref>
     elements = html_soup.find_all("xref")
     if len(elements) > 0:

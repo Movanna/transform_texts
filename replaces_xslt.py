@@ -451,6 +451,10 @@ def transform_tags(html_soup):
             element.name = "span"
             if "resp" in element.attrs:
                 del element["resp"]
+            # in reading texts, supplied @type="gap" doesn't
+            # differ from the ordinary supplied
+            if "type" in element.attrs:
+                del element["type"]
             element["class"] = ["choice"]
             element["class"].append("tooltiptrigger")
             element["class"].append("ttChanges")
