@@ -619,8 +619,6 @@ def transform_footnotes(notes, html_soup):
                 note["class"] = ["footnoteindicator"]
                 note["class"].append("tooltiptrigger")
                 note["class"].append("ttFoot")
-                # this should be @data-id, but the platform adds
-                # the "data-"-part
                 note_id = note.get("id")
                 note_symbol = note.get("n")
                 note.insert(0, note_symbol)
@@ -630,9 +628,7 @@ def transform_footnotes(notes, html_soup):
                 comment_outer_span["class"].append("ttFoot")
                 comment_inner_span = html_soup.new_tag("span")
                 comment_inner_span["class"] = "ttFixed"
-                # this should be @data-id, but the platform adds
-                # the "data-"-part
-                comment_inner_span["id"] = note_id
+                comment_inner_span["data-id"] = note_id
                 comment_inner_span.string = note_content
                 comment_outer_span.insert(0, comment_inner_span)
                 note.insert_after(comment_outer_span)
@@ -658,7 +654,7 @@ def transform_footnotes(notes, html_soup):
                     note_section.append(note_list)
                     note_list.append("\n")
                 listed_note = html_soup.new_tag("li")
-                listed_note["id"] = note_id
+                listed_note["data-id"] = note_id
                 listed_note["class"] = "footnoteItem"
                 note_list.append(listed_note)
                 original_note.name = "p"
