@@ -544,6 +544,7 @@ def transform_footnotes(notes, html_soup):
                 comment_outer_span["class"].append("ttFoot")
                 comment_inner_span = html_soup.new_tag("span")
                 comment_inner_span["class"] = "ttFixed"
+                # the platform requires data-id instead of id
                 comment_inner_span["data-id"] = note_id
                 comment_inner_span.string = note_content
                 comment_outer_span.insert(0, comment_inner_span)
