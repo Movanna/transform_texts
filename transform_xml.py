@@ -187,10 +187,10 @@ def transform_xml(old_soup):
                 if match_string:
                     seg["rend"] = "boldItalic"
                     seg.name = "hi"
-                if seg["rend"] == "italic":
+                if value == "italic":
                     del seg["rend"]
                     seg.name = "hi"
-                if seg["rend"] == "color(222222)":
+                if value == "color(222222)":
                     seg.unwrap()
     abs = new_soup.find_all("ab")
     if len(abs) > 0:
