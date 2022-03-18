@@ -109,7 +109,10 @@ def transform_tags(html_soup):
         for element in elements:
             if "type" in element.attrs:
                 div_type_value = element["type"]
-                element["class"] = div_type_value
+                if div_type_value == "chapter":
+                    element.name = "section"
+                else:
+                    element["class"] = div_type_value
                 del element["type"]
                 # these are subgroups to the hansard div
                 # for the transformation of <p> we need
@@ -160,7 +163,7 @@ def transform_tags(html_soup):
         for element in elements:
             # no need to transform these <p>:s; they are footnotes and
             # have already been transformed into html
-            if element.parent.name == "li" or element.parent.name == "section":
+            if element.parent.name == "li" or (element.parent.name == "section" and "class" in element.attrs):
                 continue
             # no need to check for the following unless a letter
             if div_type_value == "letter":
