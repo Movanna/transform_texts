@@ -163,7 +163,9 @@ def sort_stats_list(stats_list):
     stats_list_1 = stats_list.copy()
     stats_list_1.sort(key = lambda row: (row[7], row[8], row[9], row[3], row[1], row[0], row[2]))
     # sort the list by these criteria:
-    # language, pages, id
+    # language, pages, date
+    # the minus flips the order of the pages value, which is a float
+    # from ascending to descending
     stats_list_2 = stats_list.copy()
     stats_list_2.sort(key = lambda row: (row[2], -row[6], row[3]))
     return stats_list_1, stats_list_2
