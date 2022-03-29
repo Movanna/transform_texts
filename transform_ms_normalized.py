@@ -251,6 +251,9 @@ def transform_tags(html_soup):
     if len(elements) > 0:
         for element in elements:
             element.name = "td"
+            if "rend" in element.attrs:
+                element["class"] = "right"
+                del element["rend"]
     # transform <list>
     elements = html_soup.find_all("list")
     if len(element) > 0:
