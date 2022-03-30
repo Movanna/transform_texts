@@ -133,8 +133,6 @@ def transform_xml(old_soup):
         for cell in cells:
             if "style" in cell.attrs:
                 del cell["style"]
-            if "rend" in cell.attrs:
-                del cell["rend"]
     lists = new_soup.find_all("list")
     if len(lists) > 0:
         for list in lists:
