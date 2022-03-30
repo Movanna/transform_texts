@@ -15,7 +15,7 @@ Another common scenario is to **receive XML files exported from Transkribus**. T
 Because **the XML files created by the project are the base for both the web site, the e-books and the printed books**, only a pre-defined set of XML tags can be used, and there can't be spaces, tabs and newlines all over the place. **Documents coming in from different sources and collaborators may have a lot of ”extras”**, and that's why I need this transformation.
 
 ### 1. a) transform_xml.py
-An XML to XML transformation using Beautiful Soup. Tags, attributes and values are transformed. Also a lot of string replacement with re and replace in order to firstly get rid of tabs, extra spaces and newlines, then add newlines as preferred and finally fix common text problems caused by OCR programs, editors or otherwise present in the source files.
+An XML to XML transformation using Beautiful Soup. Tags, attributes and values are transformed. Also a lot of string replacement with re and replace in order to firstly get rid of tabs, extra spaces and newlines, then add newlines as preferred and finally fix common text problems caused by OCR programs, editors or otherwise present in the source files (mainly character substitution, such as allowing only one type of quotation marks).
 
 ## 2. Transform an EPUB to XML
 Google Book has digitized a lot of obscure 19th century books that are really hard to find anywhere else. Just what this project needs! However, the EPUBs are messy and the content is of course divided into many different files. In this project, each text consists of just one XML file. This script **gets the EPUB files in the right order, transform the tags and outputs a single file of nice XML**.
