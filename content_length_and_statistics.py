@@ -99,6 +99,15 @@ def fetch_db_data(publication_id, language):
         values_to_insert = (publication_id, language)
     cursor.execute(fetch_query, values_to_insert)
     db_data = cursor.fetchone()
+    # fetch the translator for this text, if there is one
+    fetch_query = """SELECT last_name, first_name FROM contributor, contribution WHERE contributor.id = contribution.contributor_id AND contribution.publication_id = %s AND text_language = %s"""
+    values_to_insert = (publication_id, language)
+    cursor.execute(fetch_query, values_to_insert)
+    translator = cursor.fetchone()
+    if translator is not None:
+        db_data = db_data + translator
+    else:
+        db_data = db_data + (None, None)
     return db_data
 
 # read an xml file and return its content as a soup object
@@ -139,7 +148,13 @@ def construct_url(publication_id, COLLECTION_ID):
 def construct_list(file_data, publication_id, language, db_data, content_length, pages, url, stats_list):
     publication_info = []
     (main_folder, subfolder, correspondent_folder, file_path) = file_data
-    (group_id, title, date) = db_data
+    (group_id, title, date, translator_last_name, translator_first_name) = db_data
+    # add the translator's name, or if there isn't a translator
+    # leave this slot empty
+    if translator_last_name is not None:
+        translator = translator_last_name + ", " + translator_first_name
+    else:
+        translator = ""
     if group_id is None:
         group_id = 100
     publication_info.append(publication_id)
@@ -152,6 +167,7 @@ def construct_list(file_data, publication_id, language, db_data, content_length,
     publication_info.append(main_folder)
     publication_info.append(subfolder)
     publication_info.append(correspondent_folder)
+    publication_info.append(translator)
     publication_info.append(url)
     publication_info.append(file_path)
     stats_list.append(publication_info)
@@ -197,13 +213,12 @@ def main():
 
 main()
 
-
 '''
 Sample output. See function construct_list for a legend for the values.
-589;2;fi;1861-12-20;20.12.1861 Kronikka.;4714;1.9;Artiklar;Barometern;;https://digital_publishing_project/publication/1/text/589/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Artiklar/Barometern/1861_12_20_Kronika/1861_12_20_Kronika_fi_589.xml;
-589;2;sv;1861-12-20;20.12.1861 Krönika.;4360;1.7;Artiklar;Barometern;;https://digital_publishing_project/publication/1/text/589/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Artiklar/Barometern/1861_12_20_Kronika/1861_12_20_Kronika_sv_589.xml;
-509;2;de;1861-03-25;25.3.1861 Lilly Steven-Steinheil–LM;7933;3.2;Brev;Mottaget;Steven_Steinheil_Lilly;https://digital_publishing_project/publication/1/text/509/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Brev/Mottaget/Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly_de_509.xml;
-509;2;fi;1861-03-25;25.3.1861 Lilly Steven-Steinheil–LM;0;0;Brev;Mottaget;Steven_Steinheil_Lilly;https://digital_publishing_project/publication/1/text/509/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Brev/Mottaget/Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly_fi_509.xml;
-509;2;sv;1861-03-25;25.3.1861 Lilly Steven-Steinheil–LM;7221;2.9;Brev;Mottaget;Steven_Steinheil_Lilly;https://digital_publishing_project/publication/1/text/509/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Brev/Mottaget/Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly_sv_509.xml;
-1191;1;sv;1856-11-24;24.11.1856 D. 24 Nov. Ändtligen är jag då 17 år!;2172;0.9;Biographica;;;https://digital_publishing_project/publication/1/text/1191/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Biographica/1856_11_24_D_24_Nov_Andtligen_ar_jag_da_17_ar/1856_11_24_D_24_Nov_Andtligen_ar_jag_da_17_ar_sv_1191.xml;
+589;2;fi;1861-12-20;20.12.1861 Kronikka.;4714;1.9;Artiklar;Barometern;;Translator_surname, Translator_forename;https://digital_publishing_project/publication/1/text/589/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Artiklar/Barometern/1861_12_20_Kronika/1861_12_20_Kronika_fi_589.xml;
+589;2;sv;1861-12-20;20.12.1861 Krönika.;4360;1.7;Artiklar;Barometern;;;https://digital_publishing_project/publication/1/text/589/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Artiklar/Barometern/1861_12_20_Kronika/1861_12_20_Kronika_sv_589.xml;
+509;2;de;1861-03-25;25.3.1861 Lilly Steven-Steinheil–LM;7933;3.2;Brev;Mottaget;Steven_Steinheil_Lilly;;https://digital_publishing_project/publication/1/text/509/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Brev/Mottaget/Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly_de_509.xml;
+509;2;fi;1861-03-25;25.3.1861 Lilly Steven-Steinheil–LM;0;0;Brev;Mottaget;Steven_Steinheil_Lilly;Translator_surname, Translator_forename;https://digital_publishing_project/publication/1/text/509/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Brev/Mottaget/Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly_fi_509.xml;
+509;2;sv;1861-03-25;25.3.1861 Lilly Steven-Steinheil–LM;7221;2.9;Brev;Mottaget;Steven_Steinheil_Lilly;Translator_surname, Translator_forename;https://digital_publishing_project/publication/1/text/509/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Brev/Mottaget/Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly_sv_509.xml;
+1191;1;sv;1856-11-24;24.11.1856 D. 24 Nov. Ändtligen är jag då 17 år!;2172;0.9;Biographica;;;;https://digital_publishing_project/publication/1/text/1191/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Biographica/1856_11_24_D_24_Nov_Andtligen_ar_jag_da_17_ar/1856_11_24_D_24_Nov_Andtligen_ar_jag_da_17_ar_sv_1191.xml;
 '''
