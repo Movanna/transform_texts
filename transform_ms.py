@@ -217,15 +217,20 @@ def transform_tags(html_soup):
                     element.name = "h4"
                     element["class"] = "sub2"
                 del element["type"]
-            # in the xml files, the table header is placed inside
-            # <table>; in html we need the header outside
-            # of the table element
+            # table headers should be <caption>
             elif element.parent.name == "table":
-                new_header = html_soup.new_tag("h3")
+                element.name = "caption"
+            # in the xml files, the list header is placed inside
+            # <list>; in html we need the header outside
+            # of the list element
+            # but not as part of the <h> hierarchy
+            elif element.parent.name == "list":
+                new_header = html_soup.new_tag("p")
+                new_header["class"] = "list_header"
                 element.parent.insert_before(new_header)
-                table_header = element.string.extract()
+                list_header = element.string.extract()
                 element.extract()
-                new_header.insert(0, table_header)
+                new_header.insert(0, list_header)
             # don't transform html tag <head>, just the xml <head>
             elif element.parent.name == "html":
                 continue
