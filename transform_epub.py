@@ -21,7 +21,7 @@
 # function list_xhtml_file_paths,
 # and the overall concept of working with epubs
 # in this way I have very gratefully borrowed from
-# Jonas Lillqvist (jonlil).
+# Jonas Lillqvist (@jonaslil).
 # 
 # (The text content of an epub should be in xhtml files,
 # but these epub content files are .xml, even though
