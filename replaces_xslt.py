@@ -469,6 +469,7 @@ def transform_tags(html_soup):
             element["class"] = ["choice"]
             element["class"].append("tooltiptrigger")
             element["class"].append("ttChanges")
+            element["class"].append("corr")
             explanatory_span = html_soup.new_tag("span")
             explanatory_span["class"] = ["tooltip"]
             explanatory_span["class"].append("ttChanges")
