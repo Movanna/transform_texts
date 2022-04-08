@@ -51,19 +51,28 @@ def read_xml(filename):
 # by space unless inside a word or between text dividing elements
 # in order not to create space(s) inside words, we have to take this
 # into account
-# the (-|­) below checks for either hyphen minus or a soft hyphen
-# (invisible here)
 def replace_hyphens(file_content):
+    # the (-|­) below checks for either hyphen minus or a soft hyphen
+    # (invisible here), and removes the line break
     search_string = re.compile(r"(-|­)<lb/>\n*(<pb.*?/>)\n*")
     file_content = search_string.sub(r"\2", file_content)
     search_string = re.compile(r"(-|­)<lb/>\n*")
     file_content = search_string.sub("", file_content)
     # the ¬ (not sign) in the transcriptions represents a hyphen which is
     # not to disappear, at this point we can replace it with a true hyphen
+    # and remove the line break
     search_string = re.compile(r"¬<lb/>\n*(<pb.*?/>)\n*")
     file_content = search_string.sub(r"-\1", file_content)
     search_string = re.compile(r"¬<lb/>\n*")
     file_content = search_string.sub("-", file_content)
+    # the – (en dash) is normally to be followed by space after removing
+    # the line break, unless the dash is part of a word and there's no
+    # space between the dash and the preceding character
+    # if the latter is the case: remove the line break now
+    search_string = re.compile(r"(\w)–<lb/>\n*(<pb.*?/>)\n*")
+    file_content = search_string.sub(r"\1–\2", file_content)
+    search_string = re.compile(r"(\w)–<lb/>\n*")
+    file_content = search_string.sub(r"\1–", file_content)
     return file_content
 
 # when newlines preceding <pb/> are removed and <pb/>-tags
