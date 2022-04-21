@@ -24,13 +24,17 @@
 # a certain text would be were it to be printed, without
 # keeping lists themselves or updating a list each time they've
 # finished a text.
-#
-# Sample output last in file.
 
 from pathlib import Path
 import psycopg2
 import re
 from bs4 import BeautifulSoup
+import datetime
+import pandas as pd
+import openpyxl
+from openpyxl.styles import NamedStyle, Font, Color, Alignment, Border, Side
+from openpyxl.formatting.rule import ColorScaleRule, Rule
+from openpyxl.styles.differential import DifferentialStyle
 
 conn_db = psycopg2.connect(
     host="",
@@ -41,13 +45,14 @@ conn_db = psycopg2.connect(
 )
 cursor = conn_db.cursor()
 
-COLLECTION_ID = 1
-SOURCE_FOLDER = "C:/../GitHub/leomechelin_files/documents/Delutgava_1"
+COLLECTIONS = [1, 2, 3, 4]
+SOURCE_FOLDER = "C:/../GitHub/leomechelin_files/documents/Delutgava_"
+EXCEL_FOLDER = "documents/statistik/"
 
 # create path object for folder from given filepath string
 # save all paths to files found in this folder or subfolders in a list
-def create_file_list(SOURCE_FOLDER):
-    path = Path(SOURCE_FOLDER)
+def create_file_list(source_folder):
+    path = Path(source_folder)
     file_list = []
     iterate_through_folders(path, file_list)
     return file_list
@@ -178,47 +183,123 @@ def sort_stats_list(stats_list):
     # main folder, subfolder, correspondent folder, date, group, id, language
     stats_list_1 = stats_list.copy()
     stats_list_1.sort(key = lambda row: (row[7], row[8], row[9], row[3], row[1], row[0], row[2]))
-    # sort the list by these criteria:
-    # language, pages, date
-    # the minus flips the order of the pages value, which is a float
-    # from ascending to descending
-    stats_list_2 = stats_list.copy()
-    stats_list_2.sort(key = lambda row: (row[2], -row[6], row[3]))
-    return stats_list_1, stats_list_2
+    return stats_list_1
 
-# create a csv file 
-def write_list_to_csv(list, filename):
-    with open(filename, "w", encoding="utf-8-sig") as output_file:
-        for row in list:
-            for item in row:
-                if item is None:
-                    item = ""
-                output_file.write(str(item) + ";")
-            output_file.write("\n")
-    print("List written to file", filename)
+# style the Excel sheets using openpyxl
+def style_spreadsheet(spreadsheet_file_path):
+    # open the newly created workbook
+    workbook = openpyxl.load_workbook(filename = spreadsheet_file_path)
+    # header style
+    header = NamedStyle(name = "header")
+    header.font = Font(bold = True, color="081354")
+    header.border = Border(bottom = Side(border_style = "thin"))
+    header.alignment = Alignment(horizontal = "center", vertical = "center")
+    # table style
+    table_font = Font(color="081354")
+    table_border = Border(bottom = Side(border_style = "thin"))
+    # loop through the sheets
+    for name in workbook.sheetnames:
+        sheet = workbook[name]
+        # first row is the header, style it differently
+        header_row = sheet[1]
+        for cell in header_row:
+            cell.style = header
+        # set column width and styles for the different types of sheets
+        if len(sheet.title) < 10:
+            sheet.column_dimensions["D"].width = 3
+            sheet.column_dimensions["D"].width = 3
+            sheet.column_dimensions["D"].width = 3
+            sheet.column_dimensions["D"].width = 12
+            sheet.column_dimensions["E"].width = 50
+            sheet.column_dimensions["F"].width = 13
+            sheet.column_dimensions["G"].width = 13
+            sheet.column_dimensions["H"].width = 13
+            sheet.column_dimensions["I"].width = 18
+            sheet.column_dimensions["J"].width = 23
+            sheet.column_dimensions["K"].width = 19
+            sheet.column_dimensions["L"].width = 20
+            sheet.column_dimensions["M"].width = 20
+            # add gradient colours depending on value of column
+            # "printed pages", ranging from orange through yellow to green
+            color_scale_rule = ColorScaleRule(start_type = "num", start_value = 0, start_color = "FF9933",  mid_type = "num", mid_value = 5, mid_color = "FFF033", end_type = "num", end_value = 300, end_color = "97FF33")
+            sheet.conditional_formatting.add("G2:G3000", color_scale_rule)
+        elif len(sheet.title) > 30:
+            sheet.column_dimensions["A"].width = 30
+            sheet.column_dimensions["B"].width = 20
+            sheet.column_dimensions["C"].width = 20
+            sheet.column_dimensions["D"].width = 20
+        else:
+            sheet.column_dimensions["A"].width = 20
+            sheet.column_dimensions["B"].width = 20
+            sheet.column_dimensions["C"].width = 20
+            sheet.column_dimensions["D"].width = 20
+            # style cells in column A as long as they're not blank 
+            diff_style = DifferentialStyle(border = table_border, font = table_font)
+            rule = Rule(type="expression", dxf = diff_style)
+            rule.formula = ["NOT(ISBLANK(A2:A100))"]
+            sheet.conditional_formatting.add("A2:A100", rule)
+        # make header row of each sheet stick when scrolling
+        sheet.freeze_panes = "N2"
+    workbook.save(spreadsheet_file_path)
+    print("Workbook updated with styles.")
+
 
 def main():
-    file_list = create_file_list(SOURCE_FOLDER)
-    stats_list = []
-    for file in file_list:
-        file_data, publication_id, language = extract_info_from_filename(file)
-        db_data = fetch_db_data(publication_id, language)
-        xml_soup = read_xml(file)
-        content_length, pages = check_content(xml_soup)
-        url = construct_url(publication_id, COLLECTION_ID)
-        stats_list = construct_list(file_data, publication_id, language, db_data, content_length, pages, url, stats_list)
-    stats_list_1, stats_list_2 = sort_stats_list(stats_list)
-    write_list_to_csv(stats_list_1, "documents/statistik/stats_list_1.csv")
-    write_list_to_csv(stats_list_2, "documents/statistik/stats_list_2.csv")
+    for collection_id in COLLECTIONS:
+        source_folder = SOURCE_FOLDER + str(collection_id)
+        file_list = create_file_list(source_folder)
+        stats_list = []
+        for file in file_list:
+            file_data, publication_id, language = extract_info_from_filename(file)
+            db_data = fetch_db_data(publication_id, language)
+            xml_soup = read_xml(file)
+            content_length, pages = check_content(xml_soup)
+            url = construct_url(publication_id, collection_id)
+            stats_list = construct_list(file_data, publication_id, language, db_data, content_length, pages, url, stats_list)
+        stats_list_sorted = sort_stats_list(stats_list)
+        # use Pandas to create spreadsheet data and pivot tables
+        df = pd.DataFrame(stats_list_sorted, columns = ["id", "grupp", "språk", "datum", "titel", "teckenmängd", "tryckta sidor", "genre", "undermapp", "korrespondent", "översättare", "länk", "fil"])
+        # table_1 has subtotals and totals, which we have to get
+        # by concatenating two slightly different pivot tables
+        piv_1 = df.pivot_table(index = ["genre", "språk"], values= "tryckta sidor", aggfunc="sum", margins = True, margins_name = "summa")
+        piv_2 = piv_1.query("genre != 'summa'").groupby(level = 0).sum().assign(språk = "totalt").set_index("språk", append = True)
+        table_1 = pd.concat([piv_1, piv_2]).sort_index()
+        table_2 = pd.pivot_table(df, values = "tryckta sidor", index = "språk", aggfunc = "sum", margins = True, margins_name = "summa")
+        # table_3 is only for collections that contain letters
+        # it's a pivot table of the number of pages for the
+        # different language versions of a correspondent's letters
+        df_filtered = df.query("genre == 'Brev'")
+        try:
+            table_3 = pd.pivot_table(df_filtered, values = "tryckta sidor", index = ["korrespondent", "språk"], columns = "undermapp", aggfunc = "sum", margins = True, margins_name = "summa")
+        except:
+            table_3 = None
+        # construct the sheet names
+        df_sheet_name = "utg. " + str(collection_id)
+        table_1_sheet_name = "utg. " + str(collection_id) + ", sidor per genre"
+        table_2_sheet_name = "utg. " + str(collection_id) + ", sidor per språk"
+        table_3_sheet_name = "utg. " + str(collection_id) + ", sidor per korrespondent"
+        # use current month for constructing the workbook title
+        file_date = datetime.datetime.now()
+        file_date = file_date.strftime("%m") + "_" + file_date.strftime("%Y")
+        spreadsheet_file_path = EXCEL_FOLDER + "Rapport_" + file_date + ".xlsx"
+        # check if the Excel workbook has already been created
+        # if it has, append to the existing one
+        path = Path(spreadsheet_file_path)
+        if path.is_file():
+            with pd.ExcelWriter(spreadsheet_file_path, engine = "openpyxl", mode = "a") as writer:
+                df.to_excel(writer, sheet_name = df_sheet_name, index = False)
+                table_1.to_excel(writer, sheet_name = table_1_sheet_name)
+                table_2.to_excel(writer, sheet_name = table_2_sheet_name)
+                if table_3 is not None:
+                    table_3.to_excel(writer, sheet_name = table_3_sheet_name)
+        else:
+            with pd.ExcelWriter(spreadsheet_file_path, engine = "openpyxl") as writer:
+                df.to_excel(writer, sheet_name = df_sheet_name, index = False)
+                table_1.to_excel(writer, sheet_name = table_1_sheet_name)
+                table_2.to_excel(writer, sheet_name = table_2_sheet_name)
+                if table_3 is not None:
+                    table_3.to_excel(writer, sheet_name = table_3_sheet_name)
+    print("Workbook " + str(spreadsheet_file_path) + " created.")
+    style_spreadsheet(spreadsheet_file_path)
 
 main()
-
-'''
-Sample output. See function construct_list for a legend for the values.
-589;2;fi;1861-12-20;20.12.1861 Kronikka.;4714;1.9;Artiklar;Barometern;;Translator_surname, Translator_forename;https://digital_publishing_project/publication/1/text/589/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Artiklar/Barometern/1861_12_20_Kronika/1861_12_20_Kronika_fi_589.xml;
-589;2;sv;1861-12-20;20.12.1861 Krönika.;4360;1.7;Artiklar;Barometern;;;https://digital_publishing_project/publication/1/text/589/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Artiklar/Barometern/1861_12_20_Kronika/1861_12_20_Kronika_sv_589.xml;
-509;2;de;1861-03-25;25.3.1861 Lilly Steven-Steinheil–LM;7933;3.2;Brev;Mottaget;Steven_Steinheil_Lilly;;https://digital_publishing_project/publication/1/text/509/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Brev/Mottaget/Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly_de_509.xml;
-509;2;fi;1861-03-25;25.3.1861 Lilly Steven-Steinheil–LM;0;0;Brev;Mottaget;Steven_Steinheil_Lilly;Translator_surname, Translator_forename;https://digital_publishing_project/publication/1/text/509/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Brev/Mottaget/Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly_fi_509.xml;
-509;2;sv;1861-03-25;25.3.1861 Lilly Steven-Steinheil–LM;7221;2.9;Brev;Mottaget;Steven_Steinheil_Lilly;Translator_surname, Translator_forename;https://digital_publishing_project/publication/1/text/509/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Brev/Mottaget/Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly/1861_03_25_Steven_Steinheil_Lilly_sv_509.xml;
-1191;1;sv;1856-11-24;24.11.1856 D. 24 Nov. Ändtligen är jag då 17 år!;2172;0.9;Biographica;;;;https://digital_publishing_project/publication/1/text/1191/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts;documents/Delutgava_1/Biographica/1856_11_24_D_24_Nov_Andtligen_ar_jag_da_17_ar/1856_11_24_D_24_Nov_Andtligen_ar_jag_da_17_ar_sv_1191.xml;
-'''
