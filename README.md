@@ -1,5 +1,5 @@
 # transform_texts
-**Python scripts for transforming texts using Beautiful Soup: XML, HTML, EPUB. Also some automated Excel reporting of text statistics.**
+**Python scripts for transforming texts using Beautiful Soup: XML, HTML, EPUB. Also some automated Excel reporting of text statistics using Pandas and openpyxl.**
 
 **I work with texts.** Texts are often seen as uncomplicated: just characters, words and paragraphs in a text document. Everyone knows how to create a text, right? Just open Word and start writing. Then send the file to be published – and the fun begins.
 
