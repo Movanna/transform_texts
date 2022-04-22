@@ -32,7 +32,7 @@ from bs4 import BeautifulSoup
 import datetime
 import pandas as pd
 import openpyxl
-from openpyxl.styles import NamedStyle, Font, Color, Alignment, Border, Side
+from openpyxl.styles import NamedStyle, Font, Alignment, Border, Side, PatternFill
 from openpyxl.formatting.rule import ColorScaleRule, Rule
 from openpyxl.styles.differential import DifferentialStyle
 
@@ -92,23 +92,33 @@ def fetch_db_data(publication_id, language):
     # these publications don't have separate manuscript files
     print(str(publication_id) + " " + language)
     if language == "sv" or language == "fi":
-        fetch_query = """SELECT publication_group_id, text, original_publication_date FROM publication, translation_text WHERE publication.id = %s AND translation_text.language = %s AND publication.translation_id = translation_text.translation_id AND field_name = %s"""
+        fetch_query = """SELECT publication_group_id, text, original_publication_date, original_language FROM publication, translation_text WHERE publication.id = %s AND translation_text.language = %s AND publication.translation_id = translation_text.translation_id AND field_name = %s"""
         field_name = "name"
         values_to_insert = (publication_id, language, field_name)
     # these publications always have a manuscript file
     else:
-        fetch_query = """SELECT publication_group_id, publication_manuscript.name, publication.original_publication_date FROM publication, publication_manuscript WHERE publication.id = %s AND publication_manuscript.original_language LIKE %s AND publication.id = publication_id"""
+        fetch_query = """SELECT publication_group_id, publication_manuscript.name, publication.original_publication_date, publication_manuscript.original_language FROM publication, publication_manuscript WHERE publication.id = %s AND publication_manuscript.original_language LIKE %s AND publication.id = publication_id"""
         # language value for these publications may contain several
-        # languages
-        language = "%" + language + "%"
-        values_to_insert = (publication_id, language)
+        # languages, but files only have one registered language per file
+        check_language = "%" + language + "%"
+        values_to_insert = (publication_id, check_language)
     cursor.execute(fetch_query, values_to_insert)
     db_data = cursor.fetchone()
-    # fetch the translator for this text, if there is one
-    fetch_query = """SELECT last_name, first_name FROM contributor, contribution WHERE contributor.id = contribution.contributor_id AND contribution.publication_id = %s AND text_language = %s"""
-    values_to_insert = (publication_id, language)
-    cursor.execute(fetch_query, values_to_insert)
-    translator = cursor.fetchone()
+    (group_id, title, date, original_language) = db_data
+    # if this file is the original language version of the files
+    # for this publication, it can't be a translation
+    # we need to separate these files from the ones that are meant
+    # to be translated but just haven't been translated yet
+    # later on, we'll replace this translator value with
+    # a specific cell colour in our Excel report
+    if original_language == language or language in original_language:
+        translator = ("X", "X")
+    else:
+        # fetch the translator for this text, if there is one
+        fetch_query = """SELECT last_name, first_name FROM contributor, contribution WHERE contributor.id = contribution.contributor_id AND contribution.publication_id = %s AND text_language = %s"""
+        values_to_insert = (publication_id, language)
+        cursor.execute(fetch_query, values_to_insert)
+        translator = cursor.fetchone()
     if translator is not None:
         db_data = db_data + translator
     else:
@@ -153,7 +163,7 @@ def construct_url(publication_id, COLLECTION_ID):
 def construct_list(file_data, publication_id, language, db_data, content_length, pages, url, stats_list):
     publication_info = []
     (main_folder, subfolder, correspondent_folder, file_path) = file_data
-    (group_id, title, date, translator_last_name, translator_first_name) = db_data
+    (group_id, title, date, original_language, translator_last_name, translator_first_name) = db_data
     # add the translator's name, or if there isn't a translator
     # leave this slot empty
     if translator_last_name is not None:
@@ -186,16 +196,17 @@ def sort_stats_list(stats_list):
     return stats_list_1
 
 # style the Excel sheets using openpyxl
+# and replace some values with a certain style
 def style_spreadsheet(spreadsheet_file_path):
     # open the newly created workbook
     workbook = openpyxl.load_workbook(filename = spreadsheet_file_path)
     # header style
     header = NamedStyle(name = "header")
-    header.font = Font(bold = True, color="081354")
+    header.font = Font(bold = True, color = "081354")
     header.border = Border(bottom = Side(border_style = "thin"))
     header.alignment = Alignment(horizontal = "center", vertical = "center")
     # table style
-    table_font = Font(color="081354")
+    table_font = Font(color = "081354")
     table_border = Border(bottom = Side(border_style = "thin"))
     # loop through the sheets
     for name in workbook.sheetnames:
@@ -204,12 +215,24 @@ def style_spreadsheet(spreadsheet_file_path):
         header_row = sheet[1]
         for cell in header_row:
             cell.style = header
+        # loop through translator values and replace value
+        # "X, X" (which means that this is the original language file)
+        # with a pattern fill, so you can easily spot those rows
+        # knowing they don't lack the translator since they're originals
+        r = 2
+        for row in sheet.iter_rows():
+            cell = sheet.cell(row = r, column = 11)
+            for cell in row:
+                if cell.value == "X, X":
+                    cell.value = ""
+                    cell.fill = PatternFill(fill_type = "lightTrellis")
+                    r += 1
         # set column width and styles for the different types of sheets
         if len(sheet.title) < 10:
             sheet.column_dimensions["D"].width = 3
             sheet.column_dimensions["D"].width = 3
             sheet.column_dimensions["D"].width = 3
-            sheet.column_dimensions["D"].width = 12
+            sheet.column_dimensions["D"].width = 11
             sheet.column_dimensions["E"].width = 50
             sheet.column_dimensions["F"].width = 13
             sheet.column_dimensions["G"].width = 13
@@ -220,9 +243,10 @@ def style_spreadsheet(spreadsheet_file_path):
             sheet.column_dimensions["L"].width = 20
             sheet.column_dimensions["M"].width = 20
             # add gradient colours depending on value of column
-            # "printed pages", ranging from orange through yellow to green
+            # "printed pages", ranging from orange for files
+            # with no content length, through yellow to green
             color_scale_rule = ColorScaleRule(start_type = "num", start_value = 0, start_color = "FF9933",  mid_type = "num", mid_value = 5, mid_color = "FFF033", end_type = "num", end_value = 300, end_color = "97FF33")
-            sheet.conditional_formatting.add("G2:G3000", color_scale_rule)
+            sheet.conditional_formatting.add("G2:G3500", color_scale_rule)
         elif len(sheet.title) > 30:
             sheet.column_dimensions["A"].width = 30
             sheet.column_dimensions["B"].width = 20
@@ -259,14 +283,14 @@ def main():
         stats_list_sorted = sort_stats_list(stats_list)
         # use Pandas to create spreadsheet data and pivot tables
         df = pd.DataFrame(stats_list_sorted, columns = ["id", "grupp", "språk", "datum", "titel", "teckenmängd", "tryckta sidor", "genre", "undermapp", "korrespondent", "översättare", "länk", "fil"])
-        # table_1 has subtotals and totals, which we have to get
+        # table_1 has both subtotals and totals, which we have to get
         # by concatenating two slightly different pivot tables
         piv_1 = df.pivot_table(index = ["genre", "språk"], values= "tryckta sidor", aggfunc="sum", margins = True, margins_name = "summa")
         piv_2 = piv_1.query("genre != 'summa'").groupby(level = 0).sum().assign(språk = "totalt").set_index("språk", append = True)
         table_1 = pd.concat([piv_1, piv_2]).sort_index()
         table_2 = pd.pivot_table(df, values = "tryckta sidor", index = "språk", aggfunc = "sum", margins = True, margins_name = "summa")
         # table_3 is only for collections that contain letters
-        # it's a pivot table of the number of pages for the
+        # it's a pivot table of the total number of pages for the
         # different language versions of a correspondent's letters
         df_filtered = df.query("genre == 'Brev'")
         try:
@@ -274,11 +298,13 @@ def main():
         except:
             table_3 = None
         # construct the sheet names
+        # there are 3 or 4 sheets for each collection
         df_sheet_name = "utg. " + str(collection_id)
         table_1_sheet_name = "utg. " + str(collection_id) + ", sidor per genre"
         table_2_sheet_name = "utg. " + str(collection_id) + ", sidor per språk"
         table_3_sheet_name = "utg. " + str(collection_id) + ", sidor per korrespondent"
         # use current month for constructing the workbook title
+        # since this is a monthly report
         file_date = datetime.datetime.now()
         file_date = file_date.strftime("%m") + "_" + file_date.strftime("%Y")
         spreadsheet_file_path = EXCEL_FOLDER + "Rapport_" + file_date + ".xlsx"
