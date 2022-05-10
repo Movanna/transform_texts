@@ -463,9 +463,18 @@ def transform_tags(html_soup):
             element.name = "span"
             element["class"] = ["add"]
             # @type="later" is a later addition
+            # @type="moved" is text that has been moved
+            # @type="marginalia" is for additions that don't really
+            # have a perfect place in the main text, so we might want to
+            # highlight them in some way
             if "type" in element.attrs:
-                element["class"].append("later")
-                del element["type"]
+                if element["type"] == "later": 
+                    element["class"].append("later")
+                if element["type"] == "moved": 
+                    element["class"].append("moved")
+                if element["type"] == "marginalia": 
+                    element["class"].append("marginalia")
+                del element["type"]   
     # transform <del>
     elements = html_soup.find_all("del")
     if len(elements) > 0:

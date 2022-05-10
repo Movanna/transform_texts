@@ -553,8 +553,15 @@ def transform_tags(html_soup):
             # @type="later" and its contents shouldn't be present
             # in reading text
             # @type="moved" or no @type should just be unwrapped
+            # @type="marginalia" is for additions that don't really
+            # have a perfect place in the main text, so we might want to
+            # highlight them in some way
             if "type" in element.attrs and element["type"] == "later":
                     element.decompose()
+            elif "type" in element.attrs and element["type"] == "marginalia":
+                element.name = "span"
+                element["class"] = "add marginalia"
+                del element["type"]
             else:
                 element.unwrap()
     # transform <del>
