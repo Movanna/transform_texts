@@ -471,14 +471,20 @@ def transform_tags(html_soup):
             element.name = "span"
             if "resp" in element.attrs:
                 del element["resp"]
-            # in reading texts, supplied @type="gap" doesn't
-            # differ from the ordinary supplied
-            if "type" in element.attrs:
-                del element["type"]
             element["class"] = ["choice"]
             element["class"].append("tooltiptrigger")
             element["class"].append("ttChanges")
-            element["class"].append("corr")
+            # in reading texts, supplied @type="gap" doesn't
+            # differ from the ordinary supplied without attribute,
+            # but @type="editorial" has its own class
+            if "type" in element.attrs:
+                if element["type"] == "gap":
+                    element["class"].append("corr")
+                if element["type"] == "editorial":
+                    element["class"].append("editorial")
+                del element["type"]
+            else:
+                element["class"].append("corr")
             explanatory_span = html_soup.new_tag("span")
             explanatory_span["class"] = ["tooltip"]
             explanatory_span["class"].append("ttChanges")

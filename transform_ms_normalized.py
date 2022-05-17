@@ -373,24 +373,43 @@ def transform_tags(html_soup):
     elements = html_soup.find_all("supplied")
     if len(elements) > 0:
         for element in elements:
-            # supplied with @type="gap" is used when the editor
-            # can guess what it said, and wants the ms to have
-            # a gap and the reading text to contain the guess
-            # thus, this should be shown just as gap in an ms
             if "type" in element.attrs:
+                # supplied with @type="gap" is used when the editor
+                # can guess what it said, and wants the ms to have
+                # a gap and the reading text to contain the guess
+                # thus, this should be shown just as gap in an ms
+                if element["type"] == "gap":
+                    element.name = "span"
+                    element.clear()
+                    element["class"] = ["gap"]
+                    element["class"].append("tooltiptrigger")
+                    element["class"].append("ttMs")
+                    explanatory_span = html_soup.new_tag("span")
+                    explanatory_span["class"] = ["tooltip"]
+                    explanatory_span["class"].append("ttMs")
+                    # insert explanatory text in tooltip span
+                    explanatory_span.insert(0, "oläsligt")
+                    element.insert(0, "[...]")
+                    element.insert_after(explanatory_span)
+                # supplied with @type="editorial" is used when the editor
+                # wants to add e.g. a h1-level heading for a text that is
+                # missing the highest level of heading (describing the
+                # whole text); this kind of supplied is shown in the ms,
+                # because it's good practice for the html (otherwise no
+                # h1 would exist in the text, only lower levels of headings)
+                if element["type"] == "editorial":
+                    element.name = "span"
+                    element["class"] = ["choice"]
+                    element["class"].append("tooltiptrigger")
+                    element["class"].append("ttChanges")
+                    element["class"].append("editorial")
+                    explanatory_span = html_soup.new_tag("span")
+                    explanatory_span["class"] = ["tooltip"]
+                    explanatory_span["class"].append("ttChanges")
+                    # insert explanatory text in tooltip span
+                    explanatory_span.insert(0, "tillagt av utgivaren")
+                    element.insert_after(explanatory_span)
                 del element["type"]
-                element.name = "span"
-                element.clear()
-                element["class"] = ["gap"]
-                element["class"].append("tooltiptrigger")
-                element["class"].append("ttMs")
-                explanatory_span = html_soup.new_tag("span")
-                explanatory_span["class"] = ["tooltip"]
-                explanatory_span["class"].append("ttMs")
-                # insert explanatory text in tooltip span
-                explanatory_span.insert(0, "oläsligt")
-                element.insert(0, "[...]")
-                element.insert_after(explanatory_span)
             # normal supplied should not be present in ms
             # since it contains an editor's additions to the text
             else:
