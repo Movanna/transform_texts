@@ -373,6 +373,8 @@ def transform_tags(html_soup):
     elements = html_soup.find_all("supplied")
     if len(elements) > 0:
         for element in elements:
+            if "resp" in element.attrs:
+                del element["resp"]
             if "type" in element.attrs:
                 # supplied with @type="gap" is used when the editor
                 # can guess what it said, and wants the ms to have
