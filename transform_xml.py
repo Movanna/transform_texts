@@ -317,6 +317,9 @@ def tidy_up_xml(xml_string, false_l):
     # remove space between full stops and standardize two full stops to three
     search_string = re.compile(r"(\w) *\. *\.( *\.)?")
     xml_string = search_string.sub(r"\1 ...", xml_string)
+    # let <hi> continue instead of being broken up into several <hi>:s
+    search_string = re.compile(r"</hi><lb/>\n<hi>")
+    xml_string = search_string.sub(r"<lb/>\n", xml_string)
     # add Narrow No-Break Space in numbers over 999
     search_string = re.compile(r"(\d{1,3})( |,)(\d{3,})( |,)(\d{3,})")
     xml_string = search_string.sub(r"\1&#x202F;\3&#x202F;\5", xml_string)
@@ -378,6 +381,8 @@ def tidy_up_xml(xml_string, false_l):
     for occurrence in result_2:
         xml_string = xml_string.replace(tag_replacement, result[i], 1)
         i += 1
+    # remove empty <p/>
+    xml_string = xml_string.replace("<p/>", "")
     # finally standardize certain other characters
     xml_string = xml_string.replace("„", "”")
     xml_string = xml_string.replace("‟", "”")
