@@ -240,25 +240,27 @@ def transform_tags(html_soup):
             else:
                 element.name = "h2"
                 element["class"] = "chapter"
-    # transform <row> (in <table>)
-    # also transform cells in a row with @role="label"
-    elements = html_soup.find_all("row")
-    if len(elements) > 0:
-        for element in elements:
-            # @role="label" means cells are to be <th>, not <td>
-            if "role" in element.attrs:
-                for child in element.children:
-                    child.name = "th"
-                del element["role"]
-            element.name = "tr"
     # transform <cell> (in <row> in <table>)
+    # also transform cells in a row with @role="label"
     elements = html_soup.find_all("cell")
     if len(elements) > 0:
         for element in elements:
-            element.name = "td"
+            # <row role="label"> means its cells are to be <th>, not <td>
+            if element.parent.name == "row" and "role" in element.parent.attrs:
+                element.name = "th"
+                element["scope"] = "col"
+            else:
+                element.name = "td"
             if "rend" in element.attrs:
                 element["class"] = "right"
                 del element["rend"]
+    # transform <row> (in <table>)
+    elements = html_soup.find_all("row")
+    if len(elements) > 0:
+        for element in elements:
+            if "role" in element.attrs:
+                del element["role"]
+            element.name = "tr"
     # transform <list>
     elements = html_soup.find_all("list")
     if len(element) > 0:
