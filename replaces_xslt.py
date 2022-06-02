@@ -373,10 +373,7 @@ def transform_tags(html_soup):
     if len(elements) > 0:
         for element in elements:
             element.name = "span"
-            # treat class value as list item so that you can
-            # append more classes
             element["class"] = ["tooltiptrigger"]
-            # add another class
             for child in element.children:
                 # transform child <orig> as part of the
                 # <choice>-transformation

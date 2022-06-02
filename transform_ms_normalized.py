@@ -310,11 +310,20 @@ def transform_tags(html_soup):
                 if child.name == "orig" or child.name == "reg":
                     element.unwrap()
                     break            
-                else:
+                # transform child <expan> as part of the
+                # <choice>-transformation
+                elif child.name == "expan":
                     element.name = "span"
                     element["class"] = ["tooltiptrigger"]
                     element["class"].append("ttAbbreviations")
                     element["class"].append("abbr")
+                    expan_span = html_soup.find("expan")
+                    expan_span.name = "span"
+                    expan_span["class"] = ["tooltip"]
+                    expan_span["class"].append("ttAbbreviations")
+                    element.insert_after(expan_span)
+                else:
+                    element.unwrap()
     # transform <orig>
     elements = html_soup.find_all("orig")
     if len(elements) > 0:
@@ -331,13 +340,6 @@ def transform_tags(html_soup):
         for element in elements:
             element.name = "span"
             element["class"] = "abbr"
-    # transform <expan>
-    elements = html_soup.find_all("expan")
-    if len(elements) > 0:
-        for element in elements:
-            element.name = "span"
-            element["class"] = ["tooltip"]
-            element["class"].append("ttAbbreviations")
     # transform <foreign>
     elements = html_soup.find_all("foreign")
     if len(elements) > 0:

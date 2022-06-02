@@ -310,7 +310,7 @@ def transform_tags(html_soup):
                     break            
                 # transform child <expan> as part of the
                 # <choice>-transformation
-                elif child.name == "expan" or child.name == "abbr":
+                elif child.name == "expan":
                     element.name = "span"
                     element["class"] = ["tooltiptrigger"]
                     element["class"].append("ttAbbreviations")
