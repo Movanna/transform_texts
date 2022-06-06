@@ -309,20 +309,25 @@ def transform_tags(html_soup):
             for child in element.children:
                 if child.name == "orig" or child.name == "reg":
                     element.unwrap()
-                    break            
+                    break
                 # transform child <expan> as part of the
                 # <choice>-transformation
-                elif child.name == "expan":
+                if child.name == "expan":
+                    expan_span = child
+                    expan_span.name = "span"
+                    expan_span["class"] = ["tooltip"]
+                    expan_span["class"].append("ttAbbreviations")
                     element.name = "span"
                     element["class"] = ["tooltiptrigger"]
                     element["class"].append("ttAbbreviations")
                     element["class"].append("abbr")
-                    expan_span = html_soup.find("expan")
-                    expan_span.name = "span"
-                    expan_span["class"] = ["tooltip"]
-                    expan_span["class"].append("ttAbbreviations")
                     element.insert_after(expan_span)
-                else:
+                # if <choice> only contains <abbr> and not <expan>:
+                # no need for the tooltip transformation of <choice>
+                # since there's nothing to show in a tooltip
+                # (cases where <expan> is previous_sibling are taken care of
+                # above where <expan> is transformed before <abbr>)
+                if child.name == "abbr" and (child.next_sibling and child.next_sibling.name != "expan") or not child.next_sibling:
                     element.unwrap()
     # transform <orig>
     elements = html_soup.find_all("orig")
