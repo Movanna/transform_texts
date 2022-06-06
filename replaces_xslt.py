@@ -24,12 +24,13 @@ def read_xml(filename):
         file_content = source_file.read()
         # check for hyphens + line breaks
         # if they are present, replace them
-        # the (-|¬|­) below looks for hyphen minus, not sign
-        # and (invisible) soft hyphen
-        # also check spacing around page breaks
         # before the file's content is made into a 
         # BeautifulSoup object
-        search_string = re.compile(r"(-|¬|­)<lb/>")
+        # the (-|¬|­) below looks for hyphen minus, not sign
+        # and (invisible) soft hyphen
+        # there may also be <hi> tags involved
+        # also check spacing around page breaks
+        search_string = re.compile(r"(-|¬|­)(</hi>)?<lb/>")
         match_string = re.search(search_string, file_content)
         if match_string:
             file_content = replace_hyphens(file_content)
@@ -54,16 +55,22 @@ def read_xml(filename):
 def replace_hyphens(file_content):
     # the (-|­) below checks for either hyphen minus or a soft hyphen
     # (invisible here), and removes the line break
-    search_string = re.compile(r"(-|­)<lb/>\n*(<pb.*?/>)\n*")
-    file_content = search_string.sub(r"\2", file_content)
-    search_string = re.compile(r"(-|­)<lb/>\n*")
+    # we also have to check for <hi> tags around the hyphen
+    # if there are two <hi> tags in the word, one for each line:
+    # merge them
+    search_string = re.compile(r"(-|­)(</hi>)?<lb/>\n*(<pb.*?/>)\n*(<hi>)?")
+    file_content = search_string.sub(r"\3", file_content)
+    search_string = re.compile(r"(-|­)(</hi>)?<lb/>\n*(<hi>)?")
     file_content = search_string.sub("", file_content)
     # the ¬ (not sign) in the transcriptions represents a hyphen which is
     # not to disappear, at this point we can replace it with a true hyphen
     # and remove the line break
-    search_string = re.compile(r"¬<lb/>\n*(<pb.*?/>)\n*")
-    file_content = search_string.sub(r"-\1", file_content)
-    search_string = re.compile(r"¬<lb/>\n*")
+    # we also have to check for <hi> tags around the hyphen
+    # if there are two <hi> tags in the word, one for each line:
+    # merge them
+    search_string = re.compile(r"¬(</hi>)?<lb/>\n*(<pb.*?/>)\n*(<hi>)?")
+    file_content = search_string.sub(r"-\2", file_content)
+    search_string = re.compile(r"¬(</hi>)?<lb/>\n*(<hi>)?")
     file_content = search_string.sub("-", file_content)
     # the – (en dash) is normally to be followed by space after removing
     # the line break, unless the dash is part of a word and there's no

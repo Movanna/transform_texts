@@ -28,8 +28,8 @@ def read_xml(filename):
         # before the file's content is made into a 
         # BeautifulSoup object
         # the (¬|­) below checks for either a not sign or
-        # an (invisible) soft hyphen
-        search_string = re.compile(r"(¬|­)<lb/>")
+        # there may also be <hi> tags involved
+        search_string = re.compile(r"(¬|­)(</hi>)?<lb/>")
         match_string = re.search(search_string, file_content)
         if match_string:
             file_content = replace_hyphens(file_content)
@@ -45,9 +45,10 @@ def read_xml(filename):
 # and the ¬ (not sign) has been used for a hyphen which is never to disappear
 # let's make all hyphens uniform, and visible, by using only hyphen minus
 # the (¬|­) below checks for either a not sign or an (invisible) soft hyphen
+# there may also be <hi> tags involved
 def replace_hyphens(file_content):
-    search_string = re.compile(r"(¬|­)<lb/>")
-    file_content = search_string.sub("-<lb/>", file_content)
+    search_string = re.compile(r"(¬|­)(</hi>)?<lb/>")
+    file_content = search_string.sub(r"-\2<lb/>", file_content)
     return file_content
 
 def create_html_template():
