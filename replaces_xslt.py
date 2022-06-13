@@ -58,9 +58,13 @@ def replace_hyphens(file_content):
     # we also have to check for <hi> tags around the hyphen
     # if there are two <hi> tags in the word, one for each line:
     # merge them
-    search_string = re.compile(r"(-|­)(</hi>)?<lb/>\n*(<pb.*?/>)\n*(<hi>)?")
-    file_content = search_string.sub(r"\3", file_content)
-    search_string = re.compile(r"(-|­)(</hi>)?<lb/>\n*(<hi>)?")
+    search_string = re.compile(r"(-|­)<lb/>\n*(<pb.*?/>)\n*")
+    file_content = search_string.sub(r"\2", file_content)
+    search_string = re.compile(r"(-|­)<lb/>\n*")
+    file_content = search_string.sub("", file_content)
+    search_string = re.compile(r"(-|­)</hi><lb/>\n*(<pb.*?/>)\n*<hi>")
+    file_content = search_string.sub(r"\2", file_content)
+    search_string = re.compile(r"(-|­)</hi><lb/>\n*<hi>")
     file_content = search_string.sub("", file_content)
     # the ¬ (not sign) in the transcriptions represents a hyphen which is
     # not to disappear, at this point we can replace it with a true hyphen
@@ -68,10 +72,17 @@ def replace_hyphens(file_content):
     # we also have to check for <hi> tags around the hyphen
     # if there are two <hi> tags in the word, one for each line:
     # merge them
-    search_string = re.compile(r"¬(</hi>)?<lb/>\n*(<pb.*?/>)\n*(<hi>)?")
-    file_content = search_string.sub(r"-\2", file_content)
-    search_string = re.compile(r"¬(</hi>)?<lb/>\n*(<hi>)?")
+    search_string = re.compile(r"¬<lb/>\n*(<pb.*?/>)\n*")
+    file_content = search_string.sub(r"-\1", file_content)
+    search_string = re.compile(r"¬<lb/>\n*")
     file_content = search_string.sub("-", file_content)
+    search_string = re.compile(r"¬</hi><lb/>\n*(<pb.*?/>)\n*<hi>")
+    file_content = search_string.sub(r"-\1", file_content)
+    search_string = re.compile(r"¬</hi><lb/>\n*<hi>")
+    file_content = search_string.sub("-", file_content)
+    # in this case, we should also add a space
+    search_string = re.compile(r"¬</hi><lb/>\n*")
+    file_content = search_string.sub("-</hi> ", file_content)
     # the – (en dash) is normally to be followed by space after removing
     # the line break, unless the dash is part of a word and there's no
     # space between the dash and the preceding character
@@ -398,7 +409,7 @@ def transform_tags(html_soup):
                 if child.name == "expan":
                     element["class"].append("ttAbbreviations")
                     element["class"].append("abbr")
-                    expan_span = html_soup.find("expan")
+                    expan_span = child
                     expan_span.name = "span"
                     expan_span["class"] = ["tooltip"]
                     expan_span["class"].append("ttAbbreviations")
