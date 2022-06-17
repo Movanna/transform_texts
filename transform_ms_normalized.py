@@ -231,9 +231,9 @@ def transform_tags(html_soup):
                 new_header = html_soup.new_tag("p")
                 new_header["class"] = "list_header"
                 element.parent.insert_before(new_header)
-                list_header = element.string.extract()
-                element.extract()
+                list_header = element.extract()
                 new_header.insert(0, list_header)
+                list_header = element.unwrap()
             # don't transform html tag <head>, just the xml <head>
             elif element.parent.name == "html":
                 continue
@@ -264,7 +264,7 @@ def transform_tags(html_soup):
             element.name = "tr"
     # transform <list>
     elements = html_soup.find_all("list")
-    if len(element) > 0:
+    if len(elements) > 0:
         for element in elements:
             element.name = "ul"
     # transform <item>
