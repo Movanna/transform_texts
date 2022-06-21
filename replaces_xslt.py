@@ -664,7 +664,14 @@ def transform_footnotes(notes, html_soup):
     # directly in transform_tags
     i = 0
     for note in notes:
-        if ("id" and "n") in note.attrs:
+        # sometimes editors forget to put @id in the <note>
+        # if it still has @n, it's got to be a footnote
+        # let's add the id so the transformation works
+        if "n" in note.attrs and "id" not in note.attrs:
+            id_value = i + 1
+            id_value = "ftn" + str(id_value)
+            note["id"] = id_value
+        if "id" in note.attrs and "n" in note.attrs:
             # we need to keep a copy of the original <note>
             # for the second transformation
             original_note = copy.copy(note)
