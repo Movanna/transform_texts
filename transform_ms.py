@@ -360,24 +360,6 @@ def transform_tags(html_soup):
                 xref_id = element.get("id")
                 element["href"] = xref_id
                 del element["id"]
-    # transform <opener>
-    elements = html_soup.find_all("opener")
-    if len(elements) > 0:
-        for element in elements:
-            element.name = "div"
-            element["class"] = "opener"
-    # transform <closer>
-    elements = html_soup.find_all("closer")
-    if len(elements) > 0:
-        for element in elements:
-            element.name = "div"
-            element["class"] = "closer"
-    # transform <postscript>
-    elements = html_soup.find_all("postscript")
-    if len(elements) > 0:
-        for element in elements:
-            element.name = "div"
-            element["class"] = "postscript"
     # transform <address>
     elements = html_soup.find_all("address")
     if len(elements) > 0:
@@ -561,6 +543,24 @@ def transform_tags(html_soup):
                 comment_span["class"].append("noteText")
                 comment_span.string = note_content
                 element.insert_after(comment_span)
+    # transform <opener>
+    elements = html_soup.find_all("opener")
+    if len(elements) > 0:
+        for element in elements:
+            element.name = "div"
+            element["class"] = "opener"
+    # transform <closer>
+    elements = html_soup.find_all("closer")
+    if len(elements) > 0:
+        for element in elements:
+            element.name = "div"
+            element["class"] = "closer"
+    # transform <postscript>
+    elements = html_soup.find_all("postscript")
+    if len(elements) > 0:
+        for element in elements:
+            element.name = "div"
+            element["class"] = "postscript"
     html_string = str(html_soup)
     # remove tabs
     search_string = re.compile(r"\t")
