@@ -294,7 +294,7 @@ def transform_tags(html_soup):
     if len(elements) > 0:
         for element in elements:
             element.unwrap()
-    # transform <supplied>
+    # transform <supplied>, add describing tooltip
     elements = html_soup.find_all("supplied")
     if len(elements) > 0:
         for element in elements:
@@ -402,12 +402,20 @@ def transform_tags(html_soup):
         for element in elements:
             element.name = "p"
             element["class"] = "signed"
-    # transform <add>
+    # transform <add>, add describing tooltip
     elements = html_soup.find_all("add")
     if len(elements) > 0:
         for element in elements:
             element.name = "span"
             element["class"] = ["add"]
+            element["class"].append("tooltiptrigger")
+            element["class"].append("ttMs")
+            # create tooltip span
+            explanatory_span = html_soup.new_tag("span")
+            explanatory_span["class"] = ["tooltip"]
+            explanatory_span["class"].append("ttMs")
+            if "type" not in element.attrs:
+                explanatory_span.insert(0, "tillagt")
             # @type="later" is a later addition
             # @type="moved" is text that has been moved
             # @type="marginalia" is for additions that don't really
@@ -416,18 +424,31 @@ def transform_tags(html_soup):
             if "type" in element.attrs:
                 if element["type"] == "later": 
                     element["class"].append("later")
+                    explanatory_span.insert(0, "tillagt senare")
                 if element["type"] == "moved": 
                     element["class"].append("moved")
+                    explanatory_span.insert(0, "flyttad text")
                 if element["type"] == "marginalia": 
                     element["class"].append("marginalia")
-                del element["type"]   
-    # transform <del>
+                    explanatory_span.insert(0, "tillagt i marginalen")
+                del element["type"]
+            element.insert_after(explanatory_span)
+    # transform <del>, add describing tooltip
     elements = html_soup.find_all("del")
     if len(elements) > 0:
         for element in elements:
             element.name = "span"
-            element["class"] = "deletion"
-    # transform <gap>
+            element["class"] = ["deletion"]
+            element["class"].append("tooltiptrigger")
+            element["class"].append("ttMs")
+            # create tooltip span
+            explanatory_span = html_soup.new_tag("span")
+            explanatory_span["class"] = ["tooltip"]
+            explanatory_span["class"].append("ttMs")
+            # insert explanatory text in tooltip span
+            explanatory_span.insert(0, "struket")
+            element.insert_after(explanatory_span)
+    # transform <gap>, add describing tooltip
     elements = html_soup.find_all("gap")
     if len(elements) > 0:
         for element in elements:
@@ -446,24 +467,21 @@ def transform_tags(html_soup):
             explanatory_span.insert(0, "oläsligt")
             element.insert(0, "[...]")
             element.insert_after(explanatory_span)
-    # transform <unclear>
+    # transform <unclear>, add describing tooltip
     elements = html_soup.find_all("unclear")
     if len(elements) > 0:
         for element in elements:
-            unclear_content = element.get_text()
-            element.clear()
             element.name = "span"
             element["class"] = ["unclear"]
             element["class"].append("tooltiptrigger")
             element["class"].append("ttMs")
-            element.insert(0, unclear_content)
             # insert explanatory text in tooltip span
             explanatory_span = html_soup.new_tag("span")
             explanatory_span["class"] = ["tooltip"]
             explanatory_span["class"].append("ttMs")
             explanatory_span.insert(0, "svårtytt")
             element.insert_after(explanatory_span)
-        # transform <div> and @type of divs to @class
+    # transform <div> and @type of divs to @class
     # also handle footnotes <note> for each <div>
     elements = html_soup.find_all("div")
     if len(elements) > 0:

@@ -295,7 +295,7 @@ def transform_tags(html_soup):
     if len(elements) > 0:
         for element in elements:
             element.unwrap()
-    # transform <supplied>
+    # transform <supplied>, add describing tooltip
     elements = html_soup.find_all("supplied")
     if len(elements) > 0:
         for element in elements:
@@ -415,7 +415,7 @@ def transform_tags(html_soup):
     if len(elements) > 0:
         for element in elements:
             element.decompose()
-    # transform <gap>
+    # transform <gap>, add describing tooltip
     elements = html_soup.find_all("gap")
     if len(elements) > 0:
         for element in elements:
@@ -434,17 +434,14 @@ def transform_tags(html_soup):
                 explanatory_span.insert(0, "oläsligt")
                 element.insert(0, "[...]")
                 element.insert(1, explanatory_span)
-    # transform <unclear>
+    # transform <unclear>, add describing tooltip
     elements = html_soup.find_all("unclear")
     if len(elements) > 0:
         for element in elements:
-            unclear_content = element.get_text()
-            element.clear()
             element.name = "span"
             element["class"] = ["unclear"]
             element["class"].append("tooltiptrigger")
             element["class"].append("ttMs")
-            element.insert(0, unclear_content)
             # insert explanatory text in tooltip span
             explanatory_span = html_soup.new_tag("span")
             explanatory_span["class"] = ["tooltip"]
