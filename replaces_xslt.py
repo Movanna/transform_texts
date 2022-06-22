@@ -406,7 +406,7 @@ def transform_tags(html_soup):
             if "corresp" in element.attrs:
                 element["data-id"] = element.get("corresp")
                 del element["corresp"]
-    # transform <supplied>
+    # transform <supplied>, add describing tooltip
     elements = html_soup.find_all("supplied")
     if len(elements) > 0:
         for element in elements:
@@ -494,7 +494,7 @@ def transform_tags(html_soup):
         for element in elements:
             element.name = "p"
             element["class"] = "signed"
-    # transform <add>
+    # transform <add>, add describing tooltip
     elements = html_soup.find_all("add")
     if len(elements) > 0:
         for element in elements:
@@ -527,7 +527,7 @@ def transform_tags(html_soup):
     if len(elements) > 0:
         for element in elements:
             element.decompose()
-    # transform <gap>
+    # transform <gap>, add describing tooltip
     elements = html_soup.find_all("gap")
     if len(elements) > 0:
         for element in elements:
@@ -546,7 +546,7 @@ def transform_tags(html_soup):
                 explanatory_span.insert(0, "oläsligt")
                 element.insert(0, "[...]")
                 element.insert_after(explanatory_span)
-    # transform <unclear>
+    # transform <unclear>, add describing tooltip
     elements = html_soup.find_all("unclear")
     elements = html_soup.find_all("unclear")
     if len(elements) > 0:
