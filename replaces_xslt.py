@@ -508,8 +508,17 @@ def transform_tags(html_soup):
                     element.decompose()
             elif "type" in element.attrs and element["type"] == "marginalia":
                 element.name = "span"
-                element["class"] = "add marginalia"
+                element["class"] = ["add"]
+                element["class"].append("marginalia")
+                element["class"].append("tooltiptrigger")
+                element["class"].append("ttMs")
                 del element["type"]
+                # insert explanatory text in tooltip span
+                explanatory_span = html_soup.new_tag("span")
+                explanatory_span["class"] = ["tooltip"]
+                explanatory_span["class"].append("ttMs")
+                explanatory_span.insert(0, "tillagt i marginalen")
+                element.insert_after(explanatory_span)
             else:
                 element.unwrap()
     # transform <del>
@@ -539,15 +548,13 @@ def transform_tags(html_soup):
                 element.insert_after(explanatory_span)
     # transform <unclear>
     elements = html_soup.find_all("unclear")
+    elements = html_soup.find_all("unclear")
     if len(elements) > 0:
         for element in elements:
-            unclear_content = element.get_text()
-            element.clear()
             element.name = "span"
             element["class"] = ["unclear"]
             element["class"].append("tooltiptrigger")
             element["class"].append("ttMs")
-            element.insert(0, unclear_content)
             # insert explanatory text in tooltip span
             explanatory_span = html_soup.new_tag("span")
             explanatory_span["class"] = ["tooltip"]
