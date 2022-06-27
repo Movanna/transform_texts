@@ -345,7 +345,7 @@ def transform_tags(html_soup):
                 # <choice>-transformation
                 if child.name == "orig":
                     element["class"].append("ttChanges")
-                    orig_span = html_soup.find("orig")
+                    orig_span = child
                     orig_span.name = "span"
                     orig_span["class"] = ["tooltip"]
                     orig_span["class"].append("ttChanges")
@@ -354,14 +354,21 @@ def transform_tags(html_soup):
                     element.insert_after(orig_span)
                 # transform child <expan> as part of the
                 # <choice>-transformation
+                # if <expan> is empty: unwrap both <expan>
+                # and <choice>
                 if child.name == "expan":
-                    element["class"].append("ttAbbreviations")
-                    element["class"].append("abbr")
-                    expan_span = child
-                    expan_span.name = "span"
-                    expan_span["class"] = ["tooltip"]
-                    expan_span["class"].append("ttAbbreviations")
-                    element.insert_after(expan_span)
+                    expan_contents = child.get_text()
+                    if len(expan_contents) > 0:
+                        element["class"].append("ttAbbreviations")
+                        element["class"].append("abbr")
+                        expan_span = child
+                        expan_span.name = "span"
+                        expan_span["class"] = ["tooltip"]
+                        expan_span["class"].append("ttAbbreviations")
+                        element.insert_after(expan_span)
+                    else:
+                        child.unwrap()
+                        element.unwrap()
     # transform <reg>
     elements = html_soup.find_all("reg")
     if len(elements) > 0:
@@ -380,8 +387,25 @@ def transform_tags(html_soup):
     elements = html_soup.find_all("abbr")
     if len(elements) > 0:
         for element in elements:
-            element.name = "span"
-            element["class"] = "abbr"
+            # if parent <choice> has been transformed to this,
+            # then <abbr> should be transformed too
+            if element.parent.name == "span" and element.parent.attrs == {"class": ["tooltiptrigger", "ttAbbreviations", "abbr"]}:
+                element.name = "span"
+                element["class"] = "abbr"
+            # if parent <choice> has been transformed to this,
+            # then there was no sibling <expan> to <abbr>
+            # and there's no meaning to keep the tooltiptrigger
+            # and no use for <abbr>, only for its contents
+            if element.parent.name == "span" and element.parent.attrs == {"class": ["tooltiptrigger"]}:
+                element.parent.unwrap()
+                element.unwrap()
+            # if there's no transformed parent <choice>,
+            # then <abbr>'s sibling <expan> had no content
+            # and <choice> has already been unwrapped as part
+            # of that transformation
+            # no use for <abbr>, only for its contents
+            else:
+                element.unwrap()
     # transform <foreign>
     elements = html_soup.find_all("foreign")
     if len(elements) > 0:
