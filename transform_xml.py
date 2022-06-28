@@ -133,6 +133,10 @@ def transform_xml(old_soup):
         for cell in cells:
             if "style" in cell.attrs:
                 del cell["style"]
+            if "rend" in cell.attrs:
+                value = cell["rend"]
+                if value == "Body_Text background-color(FAFAFA)":
+                    del cell["rend"]
     lists = new_soup.find_all("list")
     if len(lists) > 0:
         for list in lists:
@@ -143,15 +147,15 @@ def transform_xml(old_soup):
         for hi in his:
             if "rend" in hi.attrs:
                 value = hi["rend"]
-                match_string = re.search("super", value)
-                if match_string:
-                    hi["rend"] = "raised"
                 match_string = re.search("subscript", value)
                 if match_string:
                     hi["rend"] = "sub"
                 match_string = re.search("underlined", value)
                 if match_string:
                     del hi["rend"]
+                match_string = re.search("super", value)
+                if match_string:
+                    hi["rend"] = "raised"
                 match_string = re.search("strikethrough", value)
                 if match_string:
                     del hi["rend"]
@@ -168,7 +172,7 @@ def transform_xml(old_soup):
                     hi.name = "foreign"
                 if value == "Emphasis":
                     del hi["rend"]
-                if value == "color(#222222)":
+                if value == "color(#222222)" or value == "color(222222)":
                     hi.unwrap()
             if "xml:space" in hi.attrs:
                 del hi["xml:space"]
