@@ -224,7 +224,7 @@ def transform_tags(html_soup):
                     element.name = "em"
                 del element["rend"]
             else:
-                element.name = "em"
+                element.name = "i"
     # transform <milestone>
     elements = html_soup.find_all("milestone")
     if len(elements) > 0:
