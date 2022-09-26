@@ -766,7 +766,7 @@ def transform_footnotes(notes, html_soup):
             note_list.append("\n")
             i += 1
 
-# delete paragraphs that have no content
+# delete paragraphs and headings that have no content
 def prevent_empty_paragraphs(html_soup):
     # if the content of a verse line has been deleted
     # remove that empty verse line span and its trailing <br/>
@@ -778,6 +778,14 @@ def prevent_empty_paragraphs(html_soup):
                     element.next_sibling.decompose()
                 element.decompose()
     elements = html_soup.find_all("p")
+    if len(elements) > 0:
+        for element in elements:
+            if len(element.get_text(strip = True)) == 0:
+                element.decompose()
+    # if the content of a heading <head> has been deleted
+    # e.g. due to it having contained only <del> or <add type="later"> 
+    # remove that empty heading
+    elements = html_soup.find_all(['h1', 'h2', 'h3', 'h4'])
     if len(elements) > 0:
         for element in elements:
             if len(element.get_text(strip = True)) == 0:
