@@ -55,4 +55,8 @@ I construct all XML files in this project using scripts in my repo database_popu
 The script **automates the whole Excel reporting**, so I only have to run it and it outputs an Excel workbook containing all the stats and pivot tables styled to perfection, so there's no need to actually do anything in Excel except for looking at the data.
 
 ### 4. a) content_length_and_statistics.py
-This script measures the content length of each XML file in a repo or given directory by counting the characters in the human-readable text (the content of the tags), using Beautiful Soup. The script combines the content length with data from the database and outputs an Excel workbook containing info about each text. The data is neatly organized as several different pivot tables with Pandas and styled with openpyxl. Styling includes replacing values, setting column width, adding gradient colours depending on cell value, constructing sheet names and styling certain cells, rows and columns.
+This script measures the content length of each XML file in a repo or given directory by counting the characters in the human-readable text (the content of the tags), using Beautiful Soup. The script combines the content length with data from the database and outputs an Excel workbook containing lots of info about each text. The data is neatly organized as several different tables with Pandas and styled with openpyxl.
+
+**Tasks handled using Pandas include**: creating pivot tables containing subtotals and totals, so there's some concatenation of tables. Querying data frames. Adding new columns containing values calculated from the contents of a newly created pivot table. Finding specific cells. Appending rows. Changing column order. Writing to Excel.
+
+**Tasks handled using openpyxl include**: replacing values, setting column width, adding gradient colours depending on cell value, constructing sheet names and styling certain cells, rows and columns.
