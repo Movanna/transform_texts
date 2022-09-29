@@ -45,7 +45,7 @@ conn_db = psycopg2.connect(
 )
 cursor = conn_db.cursor()
 
-COLLECTIONS = [1, 2, 3, 4]
+COLLECTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 SOURCE_FOLDER = "C:/../GitHub/leomechelin_files/documents/Delutgava_"
 EXCEL_FOLDER = "documents/statistik/"
 
@@ -170,6 +170,10 @@ def construct_list(file_data, publication_id, language, db_data, content_length,
         translator = translator_last_name + ", " + translator_first_name
     else:
         translator = ""
+    # if the language of the file content is the document's
+    # original language: make this explicit
+    if language == original_language or language in original_language:
+        language = language + " (orig.)"
     if group_id is None:
         group_id = 100
     publication_info.append(publication_id)
@@ -246,7 +250,7 @@ def style_spreadsheet(spreadsheet_file_path):
             # "printed pages", ranging from orange for files
             # with no content length, through yellow to green
             color_scale_rule = ColorScaleRule(start_type = "num", start_value = 0, start_color = "FF9933",  mid_type = "num", mid_value = 5, mid_color = "FFF033", end_type = "num", end_value = 300, end_color = "97FF33")
-            sheet.conditional_formatting.add("G2:G3500", color_scale_rule)
+            sheet.conditional_formatting.add("G2:G5000", color_scale_rule)
         elif len(sheet.title) > 30:
             sheet.column_dimensions["A"].width = 30
             sheet.column_dimensions["B"].width = 20
@@ -267,64 +271,109 @@ def style_spreadsheet(spreadsheet_file_path):
     workbook.save(spreadsheet_file_path)
     print("Workbook updated with styles.")
 
+# for each file: extract data from the filename
+# and fetch additional data from the db
+# measure content length of the file
+# and construct additional data
+# make a list out of the values and append to main list
+# then sort the main list
+# use Pandas to create spreadsheet data and pivot tables
+def create_data_and_tables(file_list, collection_id):
+    stats_list = []
+    for file in file_list:
+        file_data, publication_id, language = extract_info_from_filename(file)
+        db_data = fetch_db_data(publication_id, language)
+        xml_soup = read_xml(file)
+        content_length, pages = check_content(xml_soup)
+        url = construct_url(publication_id, collection_id)
+        stats_list = construct_list(file_data, publication_id, language, db_data, content_length, pages, url, stats_list)
+    stats_list_sorted = sort_stats_list(stats_list)
+    # use Pandas to create spreadsheet data and pivot tables
+    # the data frame will be sheet 1
+    df = pd.DataFrame(stats_list_sorted, columns = ["id", "grupp", "språk", "datum", "titel", "teckenmängd", "tryckta_sidor", "genre", "undermapp", "korrespondent", "översättare", "länk", "fil"])
+    # table_1 has both subtotals and totals, which we have to get
+    # by concatenating two slightly different pivot tables
+    # this is the number of pages per language per genre
+    piv_1 = df.pivot_table(index = ["genre", "språk"], values= "tryckta_sidor", aggfunc="sum", margins = True, margins_name = "summa")
+    # this is the subtotal of the number of pages per genre
+    piv_2 = piv_1.query("genre != 'summa'").groupby(level = 0).sum().assign(språk = "totalt").set_index("språk", append = True)
+    table_1 = pd.concat([piv_1, piv_2]).sort_index()
+    # table_2 is a pivot table of the total number of pages
+    # for each language and also of how much
+    # there is to translate into Finnish and Swedish
+    piv_3 = df.pivot_table(index = "språk", values = "tryckta_sidor", aggfunc = "sum")
+    # add new columns containing values calculated
+    # from the content of newly created pivot table piv_3
+    # i.e. add "pages requiring translation"
+    piv_4 = piv_3.assign(att_översätta_till_fi = piv_3.query("språk != 'summa' and språk != 'fi' and språk != 'fi (orig.)' and språk != 'sv'"), att_översätta_till_sv = piv_3.query("språk != 'summa' and språk != 'sv' and språk != 'sv (orig.)' and språk != 'fi'")).fillna(0)
+    # also find out the value of already translated texts
+    # this query returns a whole row
+    translated_into_fi = piv_4.query("språk == 'fi'")
+    translated_into_sv = piv_4.query("språk == 'sv'")
+    # the value we want is at position row 0, column 0
+    # we may also get an empty DataFrame back, if nothing
+    # has been translated yet
+    if translated_into_fi.size != 0:
+        translated_into_fi = translated_into_fi.iloc[0, 0]
+    else:
+        translated_into_fi = 0
+    if translated_into_sv.size != 0:
+        translated_into_sv = translated_into_sv.iloc[0, 0]
+    else:
+        translated_into_sv = 0
+    piv_4 = piv_4.pivot_table(index = "språk", aggfunc = "sum", margins = True, margins_name = "summa")
+    # change column order
+    table_2 = piv_4.loc[:, ["tryckta_sidor", "att_översätta_till_fi", "att_översätta_till_sv"]]
+    # append last row containing the values of already translated texts
+    table_2.loc["redan översatt"] = ["", translated_into_fi, translated_into_sv]
+    # table_3 is only for collections that contain letters
+    # it's a pivot table of the total number of pages for the
+    # different language versions of a correspondent's letters
+    df_filtered = df.query("genre == 'Brev'")
+    try:
+        table_3 = pd.pivot_table(df_filtered, values = "tryckta_sidor", index = ["korrespondent", "språk"], columns = "undermapp", aggfunc = "sum", margins = True, margins_name = "summa")
+    except:
+        table_3 = None
+    # construct the sheet names
+    # there are 3 or 4 sheets for each collection:
+    # the data frame and the pivot tables
+    df_sheet_name = "utg. " + str(collection_id)
+    table_1_sheet_name = "utg. " + str(collection_id) + ", sidor per genre"
+    table_2_sheet_name = "utg. " + str(collection_id) + ", sidor per språk"
+    table_3_sheet_name = "utg. " + str(collection_id) + ", sidor per korrespondent"
+    # use current month for constructing the workbook title
+    # since this is a monthly report
+    file_date = datetime.datetime.now()
+    file_date = file_date.strftime("%m") + "_" + file_date.strftime("%Y")
+    spreadsheet_file_path = EXCEL_FOLDER + "Rapport_" + file_date + ".xlsx"
+    # check if the Excel workbook has already been created
+    # if it has, append to the existing one
+    path = Path(spreadsheet_file_path)
+    if path.is_file():
+        with pd.ExcelWriter(spreadsheet_file_path, engine = "openpyxl", mode = "a") as writer:
+            df.to_excel(writer, sheet_name = df_sheet_name, index = False)
+            table_1.to_excel(writer, sheet_name = table_1_sheet_name)
+            table_2.to_excel(writer, sheet_name = table_2_sheet_name)
+            if table_3 is not None:
+                table_3.to_excel(writer, sheet_name = table_3_sheet_name)
+    else:
+        with pd.ExcelWriter(spreadsheet_file_path, engine = "openpyxl") as writer:
+            df.to_excel(writer, sheet_name = df_sheet_name, index = False)
+            table_1.to_excel(writer, sheet_name = table_1_sheet_name)
+            table_2.to_excel(writer, sheet_name = table_2_sheet_name)
+            if table_3 is not None:
+                table_3.to_excel(writer, sheet_name = table_3_sheet_name)
+    return spreadsheet_file_path
 
 def main():
+    # create a list of all files in a collection
+    # then create spreadsheet data for the texts in
+    # each collection
+    # finally style the spreadsheet
     for collection_id in COLLECTIONS:
         source_folder = SOURCE_FOLDER + str(collection_id)
         file_list = create_file_list(source_folder)
-        stats_list = []
-        for file in file_list:
-            file_data, publication_id, language = extract_info_from_filename(file)
-            db_data = fetch_db_data(publication_id, language)
-            xml_soup = read_xml(file)
-            content_length, pages = check_content(xml_soup)
-            url = construct_url(publication_id, collection_id)
-            stats_list = construct_list(file_data, publication_id, language, db_data, content_length, pages, url, stats_list)
-        stats_list_sorted = sort_stats_list(stats_list)
-        # use Pandas to create spreadsheet data and pivot tables
-        df = pd.DataFrame(stats_list_sorted, columns = ["id", "grupp", "språk", "datum", "titel", "teckenmängd", "tryckta sidor", "genre", "undermapp", "korrespondent", "översättare", "länk", "fil"])
-        # table_1 has both subtotals and totals, which we have to get
-        # by concatenating two slightly different pivot tables
-        piv_1 = df.pivot_table(index = ["genre", "språk"], values= "tryckta sidor", aggfunc="sum", margins = True, margins_name = "summa")
-        piv_2 = piv_1.query("genre != 'summa'").groupby(level = 0).sum().assign(språk = "totalt").set_index("språk", append = True)
-        table_1 = pd.concat([piv_1, piv_2]).sort_index()
-        table_2 = pd.pivot_table(df, values = "tryckta sidor", index = "språk", aggfunc = "sum", margins = True, margins_name = "summa")
-        # table_3 is only for collections that contain letters
-        # it's a pivot table of the total number of pages for the
-        # different language versions of a correspondent's letters
-        df_filtered = df.query("genre == 'Brev'")
-        try:
-            table_3 = pd.pivot_table(df_filtered, values = "tryckta sidor", index = ["korrespondent", "språk"], columns = "undermapp", aggfunc = "sum", margins = True, margins_name = "summa")
-        except:
-            table_3 = None
-        # construct the sheet names
-        # there are 3 or 4 sheets for each collection
-        df_sheet_name = "utg. " + str(collection_id)
-        table_1_sheet_name = "utg. " + str(collection_id) + ", sidor per genre"
-        table_2_sheet_name = "utg. " + str(collection_id) + ", sidor per språk"
-        table_3_sheet_name = "utg. " + str(collection_id) + ", sidor per korrespondent"
-        # use current month for constructing the workbook title
-        # since this is a monthly report
-        file_date = datetime.datetime.now()
-        file_date = file_date.strftime("%m") + "_" + file_date.strftime("%Y")
-        spreadsheet_file_path = EXCEL_FOLDER + "Rapport_" + file_date + ".xlsx"
-        # check if the Excel workbook has already been created
-        # if it has, append to the existing one
-        path = Path(spreadsheet_file_path)
-        if path.is_file():
-            with pd.ExcelWriter(spreadsheet_file_path, engine = "openpyxl", mode = "a") as writer:
-                df.to_excel(writer, sheet_name = df_sheet_name, index = False)
-                table_1.to_excel(writer, sheet_name = table_1_sheet_name)
-                table_2.to_excel(writer, sheet_name = table_2_sheet_name)
-                if table_3 is not None:
-                    table_3.to_excel(writer, sheet_name = table_3_sheet_name)
-        else:
-            with pd.ExcelWriter(spreadsheet_file_path, engine = "openpyxl") as writer:
-                df.to_excel(writer, sheet_name = df_sheet_name, index = False)
-                table_1.to_excel(writer, sheet_name = table_1_sheet_name)
-                table_2.to_excel(writer, sheet_name = table_2_sheet_name)
-                if table_3 is not None:
-                    table_3.to_excel(writer, sheet_name = table_3_sheet_name)
+        spreadsheet_file_path = create_data_and_tables(file_list, collection_id)
     print("Workbook " + str(spreadsheet_file_path) + " created.")
     style_spreadsheet(spreadsheet_file_path)
 
