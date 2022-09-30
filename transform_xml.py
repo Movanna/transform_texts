@@ -62,6 +62,9 @@ def transform_xml(old_soup):
                 value = p["rend"]
                 if value == "Quote":
                     p["rend"] = "parIndent"
+                if value == "Leipäteksti_ei_sisennetty" and DOCUMENT_TYPE == "letter":
+                    del p["rend"]
+                    continue
                 if value == "Leipäteksti_ei_sisennetty":
                     p["rend"] = "noIndent"
                 if value == "footnote text":
@@ -135,7 +138,7 @@ def transform_xml(old_soup):
                 del cell["style"]
             if "rend" in cell.attrs:
                 value = cell["rend"]
-                if value == "Body_Text background-color(FAFAFA)":
+                if value == "Body_Text background-color(FAFAFA)" or value == "Leipäteksti_ei_sisennetty background-color(FAFAFA)":
                     del cell["rend"]
     lists = new_soup.find_all("list")
     if len(lists) > 0:
@@ -145,8 +148,20 @@ def transform_xml(old_soup):
     his = new_soup.find_all("hi")
     if len(his) > 0:
         for hi in his:
-            if "rend" in hi.attrs:
+            if "rend" in hi.attrs and "style" in hi.attrs:
+                del hi["style"]
                 value = hi["rend"]
+                match_string = re.search("color", value)
+                if match_string:
+                    search_string = re.compile(r"\s*color\(.*\)")
+                    value = search_string.sub("", value)
+                    if value == "":
+                        hi.unwrap()
+                        continue
+                    else:
+                        hi["rend"] = value
+                if value == "italic bold":
+                    hi["rend"] = "boldItalic"
                 match_string = re.search("subscript", value)
                 if match_string:
                     hi["rend"] = "sub"
@@ -163,8 +178,6 @@ def transform_xml(old_soup):
                 match_string = re.search("italic", value)
                 if match_string or value == "italic":
                     del hi["rend"]
-                if value == "italic bold":
-                    hi["rend"] = "boldItalic"
                 if value == "Harvennettu":
                     hi["rend"] = "expanded"
                 if value == "Vieraskielinen":
@@ -172,12 +185,46 @@ def transform_xml(old_soup):
                     hi.name = "foreign"
                 if value == "Emphasis":
                     del hi["rend"]
-                if value == "color(#222222)" or value == "color(222222)":
-                    hi.unwrap()
+            if "rend" in hi.attrs:
+                value = hi["rend"]
+                match_string = re.search("color", value)
+                if match_string:
+                    search_string = re.compile(r"\s*color\(.*\)")
+                    value = search_string.sub("", value)
+                    if value == "":
+                        hi.unwrap()
+                        continue
+                    else:
+                        hi["rend"] = value
+                if value == "italic bold":
+                    hi["rend"] = "boldItalic"
+                match_string = re.search("subscript", value)
+                if match_string:
+                    hi["rend"] = "sub"
+                match_string = re.search("underlined", value)
+                if match_string:
+                    del hi["rend"]
+                match_string = re.search("super", value)
+                if match_string:
+                    hi["rend"] = "raised"
+                match_string = re.search("strikethrough", value)
+                if match_string:
+                    del hi["rend"]
+                    hi.name = "tag"
+                match_string = re.search("italic", value)
+                if match_string or value == "italic":
+                    del hi["rend"]
+                if value == "Harvennettu":
+                    hi["rend"] = "expanded"
+                if value == "Vieraskielinen":
+                    del hi["rend"]
+                    hi.name = "foreign"
+                if value == "Emphasis":
+                    del hi["rend"]
             if "xml:space" in hi.attrs:
                 del hi["xml:space"]
             if "style" in hi.attrs:
-                del hi["style"]
+                hi.unwrap()
     segs = new_soup.find_all("seg")
     if len(segs) > 0:
         for seg in segs:
@@ -194,6 +241,14 @@ def transform_xml(old_soup):
                     seg.name = "hi"
                 if value == "color(222222)":
                     seg.unwrap()
+    refs = new_soup.find_all("ref")
+    if len(refs) > 0:
+        for ref in refs:
+            if "target" in ref.attrs:
+                ref["type"] = "readingtext"
+                del ref["target"]
+                ref["id"] = ""
+                ref.name = "xref"
     abs = new_soup.find_all("ab")
     if len(abs) > 0:
         for ab in abs:
@@ -311,6 +366,10 @@ def tidy_up_xml(xml_string, false_l):
         # get rid of newline just before end of <p>
         search_string = re.compile(r"<lb/>\n</p>")
         xml_string = search_string.sub("</p>", xml_string)
+    # these are non-wanted No-Break Spaces,
+    # a result of copypaste in the source document
+    search_string = re.compile(r" ")
+    xml_string = search_string.sub(" ", xml_string)
     # delete space before <pb/>
     search_string = re.compile(r"( )(<pb .+?/>)")
     xml_string = search_string.sub(r"\2", xml_string)
@@ -331,13 +390,13 @@ def tidy_up_xml(xml_string, false_l):
     xml_string = search_string.sub(r"\1&#x202F;\3", xml_string)
     # the asterisk stands for a footnote
     search_string = re.compile(r" *\*\) *")
-    xml_string = search_string.sub("<note n=\"*)\"></note>", xml_string)
+    xml_string = search_string.sub("<note id=\"\" n=\"*)\"></note>", xml_string)
     # replace certain characters
     search_string = re.compile(r"&quot;")
     xml_string = search_string.sub("”", xml_string)
     search_string = re.compile(r"&apos;")
     xml_string = search_string.sub("’", xml_string)
-    search_string = re.compile(r"º")
+    search_string = re.compile(r"º|°")
     xml_string = search_string.sub("<hi rend=\"raised\">o</hi>", xml_string)
     # there should be a non-breaking space before %
     search_string = re.compile(r"([^  ])%")
