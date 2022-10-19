@@ -312,12 +312,17 @@ def transform_tags(html_soup):
                     element.name = "sup"
                 elif element["rend"] == "sub":
                     element.name = "sub"
+                elif element.parent.name == "h1" or element.parent.name == "h2" or element.parent.name == "h3" or element.parent.name == "h4":
+                    element.unwrap()
                 else:
                     element["class"] = element["rend"]
                     element.name = "em"
                 del element["rend"]
             else:
-                element.name = "i"
+                if element.parent.name == "h1" or element.parent.name == "h2" or element.parent.name == "h3" or element.parent.name == "h4":
+                    element.unwrap()
+                else:
+                    element.name = "i"
     # transform <milestone>
     elements = html_soup.find_all("milestone")
     if len(elements) > 0:
