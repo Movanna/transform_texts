@@ -157,6 +157,9 @@ def transform_tags(html_soup):
                 if type_value == "subchapter2":
                     element.name = "h4"
                     element["class"] = "sub2"
+                if type_value == "subchapter3":
+                    element.name = "h5"
+                    element["class"] = "sub3"
                 del element["type"]
             # table headers should be <caption>
             elif element.parent.name == "table":
