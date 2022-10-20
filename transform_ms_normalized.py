@@ -454,7 +454,7 @@ def transform_tags(html_soup):
         for element in elements:
             if "type" in element.attrs:
                 div_type_value = element["type"]
-                if div_type_value == "chapter":
+                if div_type_value == "chapter" or div_type_value == "section":
                     element.name = "section"
                 else:
                     element["class"] = div_type_value
