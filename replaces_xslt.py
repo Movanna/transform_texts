@@ -636,25 +636,37 @@ def transform_tags(html_soup):
     # editors' explanations
     # footnotes were already transformed in
     # function transform_footnotes
-    elements = html_soup.find_all("note")
+    editorial_notes = html_soup.find_all("note")
     if len(elements) > 0:
-        for element in elements:
+        for editorial_note in editorial_notes:
             # editors' explanations have no attributes
-            if element.attrs == {}:
-                element.name = "img"
-                element["class"] = ["tooltiptrigger"]
-                element["class"].append("comment")
-                element["class"].append("ttComment")
-                element["src"] = "images/asterix.svg"
-                note_content = element.get_text()
-                element.clear()
-                comment_span = html_soup.new_tag("span")
-                comment_span["class"] = ["tooltip"]
-                comment_span["class"].append("ttComment")
-                comment_span["class"].append("teiComment")
-                comment_span["class"].append("noteText")
-                comment_span.string = note_content
-                element.insert_after(comment_span)
+            # this is the tooltip transformation, we need two new tags
+            if editorial_note.attrs == {}:
+                note_marker = html_soup.new_tag("img")
+                note_marker["class"] = ["tooltiptrigger"]
+                note_marker["class"].append("comment")
+                note_marker["class"].append("ttComment")
+                note_marker["src"] = "images/asterix.svg"
+                html_editorial_note = html_soup.new_tag("span")
+                html_editorial_note["class"] = ["tooltip"]
+                html_editorial_note["class"].append("ttComment")
+                html_editorial_note["class"].append("teiComment")
+                html_editorial_note["class"].append("noteText")
+                # we can't just use .get_text() for getting the note contents,
+                # because we need to preserve all the tags in the note text,
+                # such as <xref>
+                # by replacing <note> with the new html_editorial_note tag,
+                # we get the new span on its right place in the tree
+                # and can use it to get the other new tag in place
+                # but html_editorial_note has no content until we add the old
+                # content back (old note tag + its content saved in editorial_note_content)
+                # since we used the old tag just to conveniently keep all note
+                # contents together, we finally have to unwrap editorial_note_content,
+                # getting rid of that old tag
+                editorial_note_content = editorial_note.replace_with(html_editorial_note)
+                html_editorial_note.insert_before(note_marker)
+                html_editorial_note.insert(0, editorial_note_content)
+                editorial_note_content.unwrap()
     # transform <opener>
     elements = html_soup.find_all("opener")
     if len(elements) > 0:
@@ -714,7 +726,7 @@ def transform_footnotes(notes, html_soup):
             # we need to keep a copy of the original <note>
             # for the second transformation
             original_note = copy.copy(note)
-            # this is the tooltip transformation
+            # this is the tooltip transformation, we need three new tags
             note_id = note.get("id")
             note_symbol = note.get("n")
             html_note = html_soup.new_tag("span")
@@ -723,17 +735,28 @@ def transform_footnotes(notes, html_soup):
             html_note["class"].append("ttFoot")
             html_note["data-id"] = note_id
             html_note.insert(0, note_symbol)
-            note_content = note.replace_with(html_note)
             note_outer_span = html_soup.new_tag("span")
             note_outer_span["class"] = ["tooltip"]
             note_outer_span["class"].append("ttFoot")
             note_inner_span = html_soup.new_tag("span")
             note_inner_span["class"] = "ttFixed"
             note_inner_span["data-id"] = note_id
+            # we can't just use .get_text() for getting the note contents,
+            # because we need to preserve all the tags in the note text,
+            # such as <persName> or <xref>
+            # by replacing <note> with the new note_inner_span tag,
+            # we get the new span on its right place in the tree
+            # and can use it to get the other new tags in place
+            # but note_inner_span has no content until we add the old
+            # content back (old note tag + its content saved in note_content)
+            # since we used the old tag just to conveniently keep all note
+            # contents together, we finally have to unwrap note_content,
+            # getting rid of that old tag
+            note_content = note.replace_with(note_inner_span)
+            note_inner_span.insert_before(html_note)
             note_inner_span.insert(0, note_content)
-            note_outer_span.insert(0, note_inner_span)
-            html_note.insert_after(note_outer_span)
-            note_content = note_content.unwrap()
+            note_inner_span.wrap(note_outer_span)
+            note_content.unwrap()
             # this is the footnote list transformation:
             # <section><p></p><ol><li><p><a></a></p></li></ol></section>
             # if this is the first note in this <div>:
