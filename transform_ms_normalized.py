@@ -369,6 +369,7 @@ def transform_tags(html_soup):
             element.name = "a"
             if "type" in element.attrs:
                 element["class"] = ["xreference"]
+                # link to other texts on the site
                 if element["type"] == "introduction": 
                     element["class"].append("ref_introduction")
                 if element["type"] == "readingtext": 
@@ -376,11 +377,18 @@ def transform_tags(html_soup):
                 # nonexistant in platform?
                 if element["type"] == "manuscript": 
                     element["class"].append("ref_manuscript")
+                # link to external site
+                if element["type"] == "ext": 
+                    element["class"].append("ref_external")
                 del element["type"]
             if "id" in element.attrs:
                 xref_id = element.get("id")
                 element["href"] = xref_id
                 del element["id"]
+            if "target" in element.attrs:
+                xref_id = element.get("target")
+                element["href"] = xref_id
+                del element["target"]
     # transform <address>
     elements = html_soup.find_all("address")
     if len(elements) > 0:
