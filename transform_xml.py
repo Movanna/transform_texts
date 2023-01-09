@@ -1,14 +1,28 @@
-# This script transforms xml documents into more suitably
-# formatted ones.
+# This script transforms XML documents into more suitably
+# formatted ones. It's tailored for documents that are 
+# either exported from Transkribus or converted from word 
+# processor documents with TEIGarage Conversion.
+
+# It also adds expansions to unexpanded abbreviations in 
+# the texts: either to abbreviations encoded as 
+# <choice><abbr>Dr</abbr><expan/></choice>
+# or not encoded at all (option CHECK_UNTAGGED_ABBREVIATIONS).
+# For this we need the abbr_dictionary created by
+# create_abbr_dictionary.py.
 
 import re
 import os
 from bs4 import BeautifulSoup
+import json
 
 SOURCE_FOLDER = "documents/bad_xml"
 OUTPUT_FOLDER = "documents/good_xml"
 # document_type includes: letter, article, misc
 DOCUMENT_TYPE = "article"
+# if True: look for unencoded abbreviations and
+# surround them with the needed tags as well as
+# add the likely expansions
+CHECK_UNTAGGED_ABBREVIATIONS = True
 
 # loop through xml source files in folder and append to list
 def get_source_file_paths():
@@ -26,10 +40,16 @@ def read_xml(filename):
     print("We have old soup.")
     return old_soup
 
+# get dictionary content from file
+def read_dict_from_file(filename):
+    with open(filename, encoding="utf-8-sig") as source_file:
+        json_content = json.load(source_file)
+        return json_content
+
 # get body from source xml and combine with template
 # go through certain elements, attributes and values
 # and transform them
-def transform_xml(old_soup):
+def transform_xml(old_soup, abbr_dictionary):
     xml_body = old_soup.find("body")
     if DOCUMENT_TYPE == "letter":
         new_soup = letter_content_template()
@@ -148,6 +168,8 @@ def transform_xml(old_soup):
     his = new_soup.find_all("hi")
     if len(his) > 0:
         for hi in his:
+            if hi.attrs == {} and DOCUMENT_TYPE != "article":
+                hi["rend"] = "raised"
             if "rend" in hi.attrs and "style" in hi.attrs:
                 del hi["style"]
                 value = hi["rend"]
@@ -224,7 +246,11 @@ def transform_xml(old_soup):
             if "xml:space" in hi.attrs:
                 del hi["xml:space"]
             if "style" in hi.attrs:
-                hi.unwrap()
+                value = hi["style"]
+                if value == "text-decoration: underline;":
+                    del hi["style"]
+                else:
+                    hi.unwrap()
     segs = new_soup.find_all("seg")
     if len(segs) > 0:
         for seg in segs:
@@ -281,6 +307,34 @@ def transform_xml(old_soup):
                 tag.unwrap()
             else:
                 tag.name = "del"
+    choices = new_soup.find_all("choice")
+    # it's easy to mark up abbreviations in Transkribus
+    # this gets exported as <choice><abbr>Tit.</abbr><expan/></choice>
+    # if we have a recorded expansion for the abbreviation:
+    # add this expansion 
+    if len(choices) > 0:
+        # by handling one <choice> at a time we can get <abbr>
+        # and <expan> as a pair
+        for choice in choices:
+            for child in choice.children:
+                # we don't want to change <abbr> in any way,
+                # we just need its content in order to check
+                # the abbr_dictionary for a possible expansion
+                if child.name == "abbr":
+                    abbr = child
+                    abbr_content = str(abbr)
+                    abbr_content = abbr_content.replace("<abbr>", "")
+                    abbr_content = abbr_content.replace("</abbr>", "")
+                    if abbr_content in abbr_dictionary.keys():
+                        expan_content = abbr_dictionary[abbr_content]
+                    else:
+                        expan_content = None
+            if expan_content is not None:
+                # now get the <expan> to update
+                for child in choice.children:
+                    # only add content to an empty <expan>
+                    if child.name == "expan" and len(child.contents) == 0:
+                        child.insert(0, expan_content)
     print("We have new soup.")
     return new_soup, false_l
 
@@ -324,7 +378,7 @@ def content_template():
 # add newlines as preferred
 # fix common problems caused by OCR programs, editors or
 # otherwise present in source files
-def tidy_up_xml(xml_string, false_l):
+def tidy_up_xml(xml_string, false_l, abbr_dictionary):
     # it's possible to export prose from Transkribus OCR
     # encoded as p + lg + l
     # since it's not verse, but prose:
@@ -396,7 +450,7 @@ def tidy_up_xml(xml_string, false_l):
     xml_string = search_string.sub("”", xml_string)
     search_string = re.compile(r"&apos;")
     xml_string = search_string.sub("’", xml_string)
-    search_string = re.compile(r"º|°")
+    search_string = re.compile(r"º")
     xml_string = search_string.sub("<hi rend=\"raised\">o</hi>", xml_string)
     # there should be a non-breaking space before %
     search_string = re.compile(r"([^  ])%")
@@ -407,6 +461,8 @@ def tidy_up_xml(xml_string, false_l):
     search_string = re.compile(r"(<note .+?>) ")
     xml_string = search_string.sub(r"\1", xml_string)
     # remove spaces at the beginning of lines
+    # (MULTILINE matches at the beginning of the string
+    # and at the beginning of each line)
     search_string = re.compile(r"^ +<", re.MULTILINE)
     xml_string = search_string.sub("<", xml_string)
     if DOCUMENT_TYPE == "article":
@@ -456,7 +512,37 @@ def tidy_up_xml(xml_string, false_l):
     xml_string = xml_string.replace("\'", "’")
     xml_string = xml_string.replace("’’", "”")
     xml_string = xml_string.replace("´", "’")
+    if CHECK_UNTAGGED_ABBREVIATIONS is True:
+        xml_string = replace_untagged_abbreviations(xml_string, abbr_dictionary)
     print("XML tidied.")
+    return xml_string
+
+# if abbreviations haven't been encoded but we still want to
+# add likely expansions to them: use this option
+def replace_untagged_abbreviations(xml_string, abbr_dictionary):
+    # certain words should only be given expans if they have
+    # been encoded as abbrs, otherwise they probably aren't
+    # abbrs but just ordinary words that can't be expanded
+    # keep these words in this list
+    do_not_expand = ["afsigt", "allmän", "art", "des", "f.", "fr", "följ", "Följ", "för", "för.", "först", "först.", "G.", "gen", "H.", "hand.", "just", "L", "L.", "m", "M", "min", "min.", "mån", "ord", "ord.", "R", "R.", "regn", "regn.", "rest", "rest.", "s", "s.", "S", "t.", "tills", "upp", "upp.", "v.", "väg."]
+    # these are all the recorded abbrs that we hav en expan for
+    abbr_list = abbr_dictionary.keys()
+    for abbreviation in abbr_list:
+        if abbreviation in do_not_expand:
+            continue
+        # prevent abbrs containing a dot from being treated as regex
+        # otherwise e.g. abbr "Fr." matches "Fri" in the text
+        abbreviation_in_text = re.sub(r"\.", "\.", abbreviation)
+        # by adding some sontext to the abbr we can specify 
+        # what a word should look like and make sure that parts
+        # of words or already tagged words don't get tagged 
+        search_string = re.compile(r"(\s|^|»|”|\()" + abbreviation_in_text + r"(\s|\.|,|\?|!|»|”|:|;|\)|<lb/>|</p>)", re.MULTILINE)
+        result = search_string.search(xml_string)
+        if result is not None:
+            # get the expan for this abbr and substitute this
+            # part of the text
+            expansion = abbr_dictionary[abbreviation]
+            xml_string = search_string.sub(r"\1" + "<choice><abbr>" + abbreviation + "</abbr><expan>" + expansion + "</expan></choice>" r"\2", xml_string)
     return xml_string
 
 # save the new xml file in another folder
@@ -471,8 +557,9 @@ def main():
     file_list = get_source_file_paths()
     for file in file_list:
         old_soup = read_xml(file)
-        new_soup, false_l = transform_xml(old_soup)
-        tidy_xml_string = tidy_up_xml(str(new_soup), false_l)
+        abbr_dictionary = read_dict_from_file("dictionaries/abbr_dictionary.json")
+        new_soup, false_l = transform_xml(old_soup, abbr_dictionary)
+        tidy_xml_string = tidy_up_xml(str(new_soup), false_l, abbr_dictionary)
         write_to_file(tidy_xml_string, file)
         print(file + " created.")
 
