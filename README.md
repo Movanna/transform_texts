@@ -24,7 +24,11 @@ After the project had been going on for a while, it turned out that editors spen
 An XML to XML transformation using Beautiful Soup. Tags, attributes and values are transformed. Also a lot of string replacement with re and replace in order to firstly get rid of tabs, extra spaces and newlines, then add newlines as preferred and finally fix common text problems caused by OCR programs, editors or otherwise present in the source files (mainly character substitution, such as allowing only one type of quotation marks). If you have a dictionary of abbreviations and their expansions (see 1.b), you'll get abbreviations in the text expanded (and, if needed, encoded) simultaneously.
 
 ### 1. b) create_abbr_dictionary.py
-This script goes through a list of abbreviations and their expansions and makes a dictionary out of them. The starting point is a match list of all already existing expanded abbreviations in a large material. They have been TEI encoded as <choice><abbr>Dr</abbr><expan>Doctor</expan></choice>. I exported this list from "Find in Files" in the Oxygen XML Editor and then cleaned it up with this script. Then I used Beautiful Soup to get the contents of <abbr> and <expan>. The contents were then made into a dictionary.
+This script goes through a list of abbreviations and their expansions and makes a dictionary out of them. The starting point is a match list of all already existing expanded abbreviations in a large material. They have been TEI encoded as
+```xml
+<choice><abbr>Dr</abbr><expan>Doctor</expan></choice>
+```
+I exported this list from "Find in Files" in the Oxygen XML Editor and then cleaned it up with this script. Then I used Beautiful Soup to get the contents of <abbr> and <expan>. The contents were then made into a dictionary.
 
 ## 2. Transform an EPUB to XML
 Google Book has digitized a lot of obscure 19th century books that are really hard to find anywhere else. Just what this project needs! However, the EPUBs are messy and the content is of course divided into many different files. In this project, each text consists of just one XML file. This script **gets the EPUB files in the right order, transforms the tags and outputs a single file of nice XML**.
