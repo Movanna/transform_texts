@@ -3,7 +3,7 @@
 # This dictionary is later used by another script which 
 # adds expansions to unexpanded abbreviations in a text.
 
-# The starting point is a match list of of all already
+# The starting point is a match list of all already
 # existing expanded abbreviations in a large material.
 # They have been encoded as <choice><abbr>Dr</abbr><expan>Doctor</expan></choice>.
 # I exported this list from "Find in Files" in the 
