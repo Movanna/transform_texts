@@ -1,27 +1,28 @@
 # This script is used for gathering statistics about
 # all of the texts in this large edition.
-#
+
 # Each language version of a text has a pre-made file
 # in the GitHub repository, containing a template.
 # Editors can add content to any file.
 # The script measures the content length of each file
 # in the repo by counting the characters in the human-readable
 # text (the content of the tags) using Beautiful Soup.
-#
+
 # The script combines the content length with data from
 # the database and outputs ordered CSV:s containing info
 # about each text.
-#
-# By organizing the data as pivot tables in Excel I get
+
+# The data is organized into pivot tables by Pandas and the
+# different sheets are styled with openpyxl. This way I get
 # nice statistics over how many texts there are in each
-# language, how long each text is, how many pages of text
-# there are within each category (i.e. letters, articles),
-# and which texts are still missing from the repo (content
-# length 0). This would otherwise be hard to know, because
-# there are thousands of texts and files and the texts mainly
-# exist only as XML. Editors can now easily check which texts
-# haven't yet been transcribed or translated and how long
-# a certain text would be were it to be printed, without
+# language, how long each text is, who the translator is,
+# how many pages of text there are within each category
+# (i.e. letters, articles), and which texts are still missing
+# from the repo (content length 0). This would otherwise be
+# hard to know, because there are thousands of texts and files
+# and the texts mainly exist only as XML. Editors can now easily
+# check which texts haven't yet been transcribed or translated
+# and how long a certain text would be were it to be printed, without
 # keeping lists themselves or updating a list each time they've
 # finished a text.
 
@@ -83,6 +84,8 @@ def extract_info_from_filename(file):
     file_data = (main_folder, subfolder, correspondent_folder, file_path)
     search_string = re.compile(r"(\w{2})_(\d+)$")
     match = re.search(search_string, file_name)
+    # even if db value original_language contains several values,
+    # the filename has just the first of them
     language = match.group(1)
     publication_id = match.group(2)
     return file_data, publication_id, language
@@ -123,6 +126,40 @@ def fetch_db_data(publication_id, language):
         db_data = db_data + translator
     else:
         db_data = db_data + (None, None)
+    # fetch the number of images for this publication
+    # (in the db this is registered as "number_of_pages")
+    # one publication may have several facsimiles, i.e. separate image units
+    # we'll count them all
+    # there are two or three language versions/files for each publication,
+    # but only the original language version/file has images
+    # the other texts/files are (at least in part) translations
+    # with no own images
+    # since all these versions share the same publication_id
+    # register the number of images only once per publication
+    # otherwise the grand total number of images will be wrong
+    # even if original_language for publication_id 1 
+    # is "de, sv", only count the images once, for the de-file,
+    # not for the sv-file or fi-file
+    images = None
+    first_original_language = False
+    if language in original_language:
+        languages = original_language.split(", ")
+        if language == languages[0]:
+            first_original_language = True
+    if original_language == language or first_original_language is True:
+        fetch_query = """SELECT number_of_pages FROM publication_facsimile_collection, publication_facsimile WHERE publication_facsimile.publication_id = %s AND publication_facsimile.publication_facsimile_collection_id = publication_facsimile_collection.id AND publication_facsimile_collection.deleted = %s"""
+        deleted = 0
+        values_to_insert = (publication_id, deleted)
+        cursor.execute(fetch_query, values_to_insert)
+        image_values = cursor.fetchall()
+        if image_values != [] and image_values is not None:
+            images = 0
+            for image_value in image_values:
+                if image_value[0] is not None:
+                    images += image_value[0]
+                else:
+                    images = None
+    db_data = db_data + (images,)
     return db_data
 
 # read an xml file and return its content as a soup object
@@ -158,8 +195,8 @@ def construct_url(publication_id, COLLECTION_ID):
     url = "https://digital_publishing_project/publication/" + str(COLLECTION_ID) + "/text/" + str(publication_id) + "/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts"
     return url
 
-# make a list out of the values for each publication
-# add that list to the main list holding all publications' values
+# make a list out of the values for each file
+# add that list to the main list holding all files' values
 def construct_list(file_data, publication_id, language, db_data, content_length, pages, url, stats_list):
     publication_info = []
     (main_folder, subfolder, correspondent_folder, file_path) = file_data
@@ -176,6 +213,8 @@ def construct_list(file_data, publication_id, language, db_data, content_length,
         language = language + " (orig.)"
     if group_id is None:
         group_id = 100
+    if images is None:
+        images = 0
     publication_info.append(publication_id)
     publication_info.append(group_id)
     publication_info.append(language)
@@ -187,6 +226,7 @@ def construct_list(file_data, publication_id, language, db_data, content_length,
     publication_info.append(subfolder)
     publication_info.append(correspondent_folder)
     publication_info.append(translator)
+    publication_info.append(images)
     publication_info.append(url)
     publication_info.append(file_path)
     stats_list.append(publication_info)
@@ -219,23 +259,41 @@ def style_spreadsheet(spreadsheet_file_path):
         header_row = sheet[1]
         for cell in header_row:
             cell.style = header
-        # loop through translator values and replace value
-        # "X, X" (which means that this is the original language file)
-        # with a pattern fill, so you can easily spot those rows
-        # knowing they don't lack the translator since they're originals
-        r = 2
-        for row in sheet.iter_rows():
-            cell = sheet.cell(row = r, column = 11)
-            for cell in row:
-                if cell.value == "X, X":
-                    cell.value = ""
-                    cell.fill = PatternFill(fill_type = "lightTrellis")
-                    r += 1
+        # do this only for sheet 1 (shortest sheet title)
+        if len(sheet.title) < 10:
+            # loop through translator values and replace value
+            # "X, X" (which means that this is the original language file)
+            # with a pattern fill, so you can easily spot those rows
+            # knowing they don't lack the translator since they're originals
+            r = 2
+            for row in sheet.iter_rows():
+                cell_to_fix = sheet.cell(row = r, column = 11)
+                if cell_to_fix.value == "X, X":
+                    cell_to_fix.value = ""
+                    cell_to_fix.fill = PatternFill(fill_type = "lightTrellis")
+                r += 1
+            # loop through values for number of images and replace value 0
+            # with a pattern fill
+            # if this is a row for something else than an original language file
+            # because only original language files can have images
+            # this makes it easier to spot those rows where an original
+            # is actually missing images (value 0)
+            r = 2
+            for row in sheet.iter_rows():
+                fix = True
+                cell_to_fix = sheet.cell(row = r, column = 12)
+                cell_to_check = sheet.cell(row = r, column = 3)
+                if "(orig.)" in str(cell_to_check.value):
+                    fix = False
+                if cell_to_fix.value == 0 and fix is True:
+                    cell_to_fix.value = ""
+                    cell_to_fix.fill = PatternFill(fill_type = "lightTrellis")
+                r += 1
         # set column width and styles for the different types of sheets
         if len(sheet.title) < 10:
-            sheet.column_dimensions["D"].width = 3
-            sheet.column_dimensions["D"].width = 3
-            sheet.column_dimensions["D"].width = 3
+            sheet.column_dimensions["A"].width = 10
+            sheet.column_dimensions["B"].width = 10
+            sheet.column_dimensions["C"].width = 10
             sheet.column_dimensions["D"].width = 11
             sheet.column_dimensions["E"].width = 50
             sheet.column_dimensions["F"].width = 13
@@ -244,13 +302,14 @@ def style_spreadsheet(spreadsheet_file_path):
             sheet.column_dimensions["I"].width = 18
             sheet.column_dimensions["J"].width = 23
             sheet.column_dimensions["K"].width = 19
-            sheet.column_dimensions["L"].width = 20
-            sheet.column_dimensions["M"].width = 20
+            sheet.column_dimensions["L"].width = 10
+            sheet.column_dimensions["M"].width = 50
+            sheet.column_dimensions["N"].width = 20
             # add gradient colours depending on value of column
             # "printed pages", ranging from orange for files
             # with no content length, through yellow to green
             color_scale_rule = ColorScaleRule(start_type = "num", start_value = 0, start_color = "FF9933",  mid_type = "num", mid_value = 5, mid_color = "FFF033", end_type = "num", end_value = 300, end_color = "97FF33")
-            sheet.conditional_formatting.add("G2:G5000", color_scale_rule)
+            sheet.conditional_formatting.add("G2:G510000", color_scale_rule)
         elif len(sheet.title) > 30:
             sheet.column_dimensions["A"].width = 30
             sheet.column_dimensions["B"].width = 20
@@ -290,12 +349,14 @@ def create_data_and_tables(file_list, collection_id):
     stats_list_sorted = sort_stats_list(stats_list)
     # use Pandas to create spreadsheet data and pivot tables
     # the data frame will be sheet 1
-    df = pd.DataFrame(stats_list_sorted, columns = ["id", "grupp", "språk", "datum", "titel", "teckenmängd", "tryckta_sidor", "genre", "undermapp", "korrespondent", "översättare", "länk", "fil"])
+    df = pd.DataFrame(stats_list_sorted, columns = ["id", "grupp", "språk", "datum", "titel", "teckenmängd", "tryckta_sidor", "genre", "undermapp", "korrespondent", "översättare", "bildantal", "länk", "fil"])
     # table_1 has both subtotals and totals, which we have to get
     # by concatenating two slightly different pivot tables
     # this is the number of pages per language per genre
-    piv_1 = df.pivot_table(index = ["genre", "språk"], values= "tryckta_sidor", aggfunc="sum", margins = True, margins_name = "summa")
+    # and also the number of images per language per genre
+    piv_1 = df.pivot_table(index = ["genre", "språk"], values = ["tryckta_sidor", "bildantal"], aggfunc = "sum", margins = True, margins_name = "summa")
     # this is the subtotal of the number of pages per genre
+    # and also the subtotal of the number of images per language per genre
     piv_2 = piv_1.query("genre != 'summa'").groupby(level = 0).sum().assign(språk = "totalt").set_index("språk", append = True)
     table_1 = pd.concat([piv_1, piv_2]).sort_index()
     # table_2 is a pivot table of the total number of pages
