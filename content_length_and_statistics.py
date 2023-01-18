@@ -90,15 +90,15 @@ def extract_info_from_filename(file):
     publication_id = match.group(2)
     return file_data, publication_id, language
 
-# get the relevant info for the publication
+# get the relevant info for the publication for this file
 def fetch_db_data(publication_id, language):
-    # these publications don't have separate manuscript files
+    # these publications don't have separate manuscript files/data
     print(str(publication_id) + " " + language)
     if language == "sv" or language == "fi":
         fetch_query = """SELECT publication_group_id, text, original_publication_date, original_language FROM publication, translation_text WHERE publication.id = %s AND translation_text.language = %s AND publication.translation_id = translation_text.translation_id AND field_name = %s"""
         field_name = "name"
         values_to_insert = (publication_id, language, field_name)
-    # these publications always have a manuscript file
+    # these publications always have a manuscript file/data
     else:
         fetch_query = """SELECT publication_group_id, publication_manuscript.name, publication.original_publication_date, publication_manuscript.original_language FROM publication, publication_manuscript WHERE publication.id = %s AND publication_manuscript.original_language LIKE %s AND publication.id = publication_id"""
         # language value for these publications may contain several
@@ -113,7 +113,7 @@ def fetch_db_data(publication_id, language):
     # we need to separate these files from the ones that are meant
     # to be translated but just haven't been translated yet
     # later on, we'll replace this translator value with
-    # a specific cell colour in our Excel report
+    # a specific cell styling in our Excel report
     if original_language == language or language in original_language:
         translator = ("X", "X")
     else:
@@ -136,8 +136,8 @@ def fetch_db_data(publication_id, language):
     # with no own images
     # since all these versions share the same publication_id
     # register the number of images only once per publication
-    # otherwise the grand total number of images will be wrong
-    # even if original_language for publication_id 1 
+    # otherwise the total number of images will be wrong:
+    # if original_language for publication_id 1 
     # is "de, sv", only count the images once, for the de-file,
     # not for the sv-file or fi-file
     images = None
@@ -146,19 +146,34 @@ def fetch_db_data(publication_id, language):
         languages = original_language.split(", ")
         if language == languages[0]:
             first_original_language = True
+    # if this is the original file, check possible images
+    # else nr of images is 0
+    images = 0
     if original_language == language or first_original_language is True:
         fetch_query = """SELECT number_of_pages FROM publication_facsimile_collection, publication_facsimile WHERE publication_facsimile.publication_id = %s AND publication_facsimile.publication_facsimile_collection_id = publication_facsimile_collection.id AND publication_facsimile_collection.deleted = %s"""
         deleted = 0
         values_to_insert = (publication_id, deleted)
         cursor.execute(fetch_query, values_to_insert)
         image_values = cursor.fetchall()
-        if image_values != [] and image_values is not None:
-            images = 0
+        # if there is one or more connected facsimile(s)
+        if image_values != []:
+            # there may be several facsimiles, count them all
+            # facsimile_type 0 represents a link to another site
+            # containing the images
+            # in that case there are no image values to count, but we still need
+            # a value in order to be able to calculate the sum of images
+            # let's use a number that can get rounded to 0 and therefore won't
+            # affect totals, but still differs from 0 and the other
+            # image int values
+            # later on, we'll replace this float value with
+            # a specific cell styling in our Excel report
             for image_value in image_values:
-                if image_value[0] is not None:
+                number_of_images = image_value[0]
+                facsimile_type = image_value[1]
+                if facsimile_type != 0 and number_of_images is not None:
                     images += image_value[0]
-                else:
-                    images = None
+                if facsimile_type == 0:
+                    images += 0.001
     db_data = db_data + (images,)
     return db_data
 
@@ -200,7 +215,7 @@ def construct_url(publication_id, COLLECTION_ID):
 def construct_list(file_data, publication_id, language, db_data, content_length, pages, url, stats_list):
     publication_info = []
     (main_folder, subfolder, correspondent_folder, file_path) = file_data
-    (group_id, title, date, original_language, translator_last_name, translator_first_name) = db_data
+    (group_id, title, date, original_language, translator_last_name, translator_first_name, images) = db_data
     # add the translator's name, or if there isn't a translator
     # leave this slot empty
     if translator_last_name is not None:
@@ -213,8 +228,6 @@ def construct_list(file_data, publication_id, language, db_data, content_length,
         language = language + " (orig.)"
     if group_id is None:
         group_id = 100
-    if images is None:
-        images = 0
     publication_info.append(publication_id)
     publication_info.append(group_id)
     publication_info.append(language)
@@ -273,21 +286,34 @@ def style_spreadsheet(spreadsheet_file_path):
                     cell_to_fix.fill = PatternFill(fill_type = "lightTrellis")
                 r += 1
             # loop through values for number of images and replace value 0
-            # with a pattern fill
-            # if this is a row for something else than an original language file
-            # because only original language files can have images
-            # this makes it easier to spot those rows where an original
-            # is actually missing images (value 0)
+            # with a pattern fill if this is a row for something else than 
+            # an original language file, because only original language files
+            # can have images
+            # also replace float values > 0 and < 1 with a string
+            # because these values represent an external link and are
+            # meant to be replaced and not to be displayed as such
+            # (see function fetch_db_data)
+            # finally change remaining floats to int in order to get rid of
+            # possible decimal points > 0.000 indicating that a publication has
+            # both images and a link (values like 4.001 should be displayed as 4)
             r = 2
             for row in sheet.iter_rows():
-                fix = True
+                orig = False
                 cell_to_fix = sheet.cell(row = r, column = 12)
                 cell_to_check = sheet.cell(row = r, column = 3)
-                if "(orig.)" in str(cell_to_check.value):
-                    fix = False
-                if cell_to_fix.value == 0 and fix is True:
-                    cell_to_fix.value = ""
-                    cell_to_fix.fill = PatternFill(fill_type = "lightTrellis")
+                if cell_to_fix.value is not None:
+                    if "(orig.)" in str(cell_to_check.value):
+                        orig = True
+                    if float(cell_to_fix.value) == 0 and orig is False:
+                        cell_to_fix.value = ""
+                        cell_to_fix.fill = PatternFill(fill_type = "lightTrellis")
+                    elif 0 < float(cell_to_fix.value) < 1 and orig is True:
+                        cell_to_fix.value = "extern länk"
+                    elif float(cell_to_fix.value) > 1:
+                        cell_to_fix.value = int(cell_to_fix.value)
+                    else:
+                        r += 1
+                        continue
                 r += 1
         # set column width and styles for the different types of sheets
         if len(sheet.title) < 10:
@@ -302,14 +328,18 @@ def style_spreadsheet(spreadsheet_file_path):
             sheet.column_dimensions["I"].width = 18
             sheet.column_dimensions["J"].width = 23
             sheet.column_dimensions["K"].width = 19
-            sheet.column_dimensions["L"].width = 10
+            sheet.column_dimensions["L"].width = 11
             sheet.column_dimensions["M"].width = 50
             sheet.column_dimensions["N"].width = 20
-            # add gradient colours depending on value of column
+            # add gradient colours depending on value in column
             # "printed pages", ranging from orange for files
             # with no content length, through yellow to green
             color_scale_rule = ColorScaleRule(start_type = "num", start_value = 0, start_color = "FF9933",  mid_type = "num", mid_value = 5, mid_color = "FFF033", end_type = "num", end_value = 300, end_color = "97FF33")
             sheet.conditional_formatting.add("G2:G510000", color_scale_rule)
+            # add similar gradient colours depending on value in
+            # column "number of images"
+            color_scale_rule_2 = ColorScaleRule(start_type = "num", start_value = 0, start_color = "FF9933",  mid_type = "num", mid_value = 3, mid_color = "FFF033", end_type = "num", end_value = 400, end_color = "97FF33")
+            sheet.conditional_formatting.add("L2:L510000", color_scale_rule_2)
         elif len(sheet.title) > 30:
             sheet.column_dimensions["A"].width = 30
             sheet.column_dimensions["B"].width = 20
@@ -350,11 +380,18 @@ def create_data_and_tables(file_list, collection_id):
     # use Pandas to create spreadsheet data and pivot tables
     # the data frame will be sheet 1
     df = pd.DataFrame(stats_list_sorted, columns = ["id", "grupp", "språk", "datum", "titel", "teckenmängd", "tryckta_sidor", "genre", "undermapp", "korrespondent", "översättare", "bildantal", "länk", "fil"])
+    # earlier on we recorded some specific image data as floats
+    # for the purpose of easily replacing it in sheet 1
+    # (see function fetch_db_data)
+    # for this df we want to get rid of those decimals as we want
+    # to sum integers, or otherwise the result will be wrong
+    df_images_as_int = pd.DataFrame(stats_list_sorted, columns = ["id", "grupp", "språk", "datum", "titel", "teckenmängd", "tryckta_sidor", "genre", "undermapp", "korrespondent", "översättare", "bildantal", "länk", "fil"])
+    df_images_as_int = df_images_as_int.astype({"bildantal": int})
     # table_1 has both subtotals and totals, which we have to get
     # by concatenating two slightly different pivot tables
     # this is the number of pages per language per genre
     # and also the number of images per language per genre
-    piv_1 = df.pivot_table(index = ["genre", "språk"], values = ["tryckta_sidor", "bildantal"], aggfunc = "sum", margins = True, margins_name = "summa")
+    piv_1 = df_images_as_int.pivot_table(index = ["genre", "språk"], values = ["tryckta_sidor", "bildantal"], aggfunc = "sum", margins = True, margins_name = "summa")
     # this is the subtotal of the number of pages per genre
     # and also the subtotal of the number of images per language per genre
     piv_2 = piv_1.query("genre != 'summa'").groupby(level = 0).sum().assign(språk = "totalt").set_index("språk", append = True)
