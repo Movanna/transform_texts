@@ -17,7 +17,8 @@
 # nice statistics over how many texts there are in each
 # language, how long each text is, who the translator is,
 # how many pages of text there are within each category
-# (i.e. letters, articles), and which texts are still missing
+# (i.e. letters, articles), how many images there are for 
+# each text or category, and which texts are still missing
 # from the repo (content length 0). This would otherwise be
 # hard to know, because there are thousands of texts and files
 # and the texts mainly exist only as XML. Editors can now easily
@@ -109,23 +110,29 @@ def fetch_db_data(publication_id, language):
     db_data = cursor.fetchone()
     (group_id, title, date, original_language) = db_data
     # if this file is the original language version of the files
-    # for this publication, it can't be a translation
+    # for this publication, it isn't a translation
     # we need to separate these files from the ones that are meant
     # to be translated but just haven't been translated yet
-    # later on, we'll replace this translator value with
+    # (their translator value is None)
+    # later on, we'll replace this temporary value with
     # a specific cell styling in our Excel report
+    # since there may be more than one translator for a text
+    # variable translator is a tuple containing a list of tuples
     if original_language == language or language in original_language:
-        translator = ("X", "X")
-    else:
-        # fetch the translator for this text, if there is one
-        fetch_query = """SELECT last_name, first_name FROM contributor, contribution WHERE contributor.id = contribution.contributor_id AND contribution.publication_id = %s AND text_language = %s"""
-        values_to_insert = (publication_id, language)
-        cursor.execute(fetch_query, values_to_insert)
-        translator = cursor.fetchone()
-    if translator is not None:
+        translator = ([("X", "X")],)
         db_data = db_data + translator
     else:
-        db_data = db_data + (None, None)
+        # fetch the translator(s) for this text, if it has any
+        fetch_query = """SELECT last_name, first_name FROM contributor, contribution WHERE contributor.id = contribution.contributor_id AND contribution.publication_id = %s AND text_language = %s AND contribution.deleted = %s"""
+        deleted = 0
+        values_to_insert = (publication_id, language, deleted)
+        cursor.execute(fetch_query, values_to_insert)
+        translators = cursor.fetchall()
+        if translators != []:
+            translator = (translators,)
+            db_data = db_data + translator
+        else:
+            db_data = db_data + ([(None, None)],)
     # fetch the number of images for this publication
     # (in the db this is registered as "number_of_pages")
     # one publication may have several facsimiles, i.e. separate image units
@@ -215,15 +222,25 @@ def construct_url(publication_id, COLLECTION_ID):
 def construct_list(file_data, publication_id, language, db_data, content_length, pages, url, stats_list):
     publication_info = []
     (main_folder, subfolder, correspondent_folder, file_path) = file_data
-    (group_id, title, date, original_language, translator_last_name, translator_first_name, images) = db_data
-    # add the translator's name, or if there isn't a translator
+    (group_id, title, date, original_language, translators, images) = db_data
+    # add the translator's name, or if there is no translator
     # leave this slot empty
-    if translator_last_name is not None:
-        translator = translator_last_name + ", " + translator_first_name
-    else:
-        translator = ""
+    # variable translators is a list of tuples, so we have to get
+    # each tuple in the list, and then the values in that tuple
+    i = 0
+    for tuple in translators:
+        translator_last_name = tuple[0]
+        if translator_last_name is None:
+            translator = ""
+            break
+        translator_first_name = tuple[1]
+        if i == 0:
+            translator = translator_last_name + ", " + translator_first_name
+        else:
+            translator = translator + "; " + translator_last_name + ", " + translator_first_name
+        i += 1
     # if the language of the file content is the document's
-    # original language: make this explicit
+    # original language: make this explicit in the report
     if language == original_language or language in original_language:
         language = language + " (orig.)"
     if group_id is None:
@@ -325,11 +342,11 @@ def style_spreadsheet(spreadsheet_file_path):
             sheet.column_dimensions["F"].width = 13
             sheet.column_dimensions["G"].width = 13
             sheet.column_dimensions["H"].width = 13
-            sheet.column_dimensions["I"].width = 18
+            sheet.column_dimensions["I"].width = 15
             sheet.column_dimensions["J"].width = 23
-            sheet.column_dimensions["K"].width = 19
-            sheet.column_dimensions["L"].width = 11
-            sheet.column_dimensions["M"].width = 50
+            sheet.column_dimensions["K"].width = 30
+            sheet.column_dimensions["L"].width = 10
+            sheet.column_dimensions["M"].width = 35
             sheet.column_dimensions["N"].width = 20
             # add gradient colours depending on value in column
             # "printed pages", ranging from orange for files
