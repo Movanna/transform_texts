@@ -437,11 +437,26 @@ def tidy_up_xml(xml_string, false_l, abbr_dictionary):
     # let <hi> continue instead of being broken up into several <hi>:s
     search_string = re.compile(r"</hi><lb/>\n<hi>")
     xml_string = search_string.sub(r"<lb/>\n", xml_string)
-    # add Narrow No-Break Space in numbers over 999
+    # for numbers over 999 that have normal space or comma as separator:
+    # replace those separators with Narrow No-Break Space
     search_string = re.compile(r"(\d{1,3})( |,)(\d{3,})( |,)(\d{3,})")
     xml_string = search_string.sub(r"\1&#x202F;\3&#x202F;\5", xml_string)
     search_string = re.compile(r"(\d{1,3})( |,)(\d{3,})")
     xml_string = search_string.sub(r"\1&#x202F;\3", xml_string)
+    # add Narrow No-Break Space in numbers over 999 without separator
+    # numbers between 1500 and 1914 in this material
+    # are most likely years and shouldn't contain any space,
+    # so leave them out of the replacement
+    search_string = re.compile(r"(\d{1,3})(\d{3,})(\d{3,})")
+    xml_string = search_string.sub(r"\1&#x202F;\2&#x202F;\3", xml_string)
+    search_string = re.compile(r"(\d{2,3})(\d{3,})")
+    xml_string = search_string.sub(r"\1&#x202F;\2", xml_string)
+    search_string = re.compile(r"\d{4,}")
+    result = re.findall(search_string, xml_string)
+    for match in result:
+        if int(match) < 1500 or int(match) > 1914:
+            match_replacement = match[:1] + "&#x202F;" + match[1:]
+            xml_string = xml_string.replace(match, match_replacement, 1)
     # the asterisk stands for a footnote
     search_string = re.compile(r" *\*\) *")
     xml_string = search_string.sub("<note id=\"\" n=\"*)\"></note>", xml_string)
@@ -471,6 +486,12 @@ def tidy_up_xml(xml_string, false_l, abbr_dictionary):
         xml_string = search_string.sub("", xml_string)
         search_string = re.compile(r"<lb/>\n")
         xml_string = search_string.sub(" ", xml_string)
+    # when there are several deleted lines of text,
+    # exports from Transkribus contain one <del> per line,
+    # but it's ok to have a <del> spanning several lines
+    # so let's replace those chopped up <del>:s
+    search_string = re.compile(r"</del><lb/>\n<del>")
+    xml_string = search_string.sub("<lb/>\n", xml_string)
     # " should be used only in elements, not in element contents
     # i.e. the text of the document should use ” (&#x201d;
     # Right Double Quotation Mark) as the character for quotation
