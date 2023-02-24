@@ -166,10 +166,13 @@ def transform_tags(html_soup):
                 del element["rend"]
             else:
                 rend_value = None
-            # type values are subtitle, motto - both used for subtitles
+            # type values: subtitle, motto
             if "type" in element.attrs:
                 type_value = element["type"]
                 element["class"] = type_value
+                if type_value == "subtitle":
+                    # as specified in Digital Publishing WAI-ARIA Module 1.1
+                    element["role"] = "doc-subtitle"
                 del element["type"]
             else:
                 type_value = None

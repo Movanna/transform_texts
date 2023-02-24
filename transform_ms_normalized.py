@@ -85,9 +85,13 @@ def transform_tags(html_soup):
                 rend_value = element["rend"]
                 element["class"] = rend_value
                 del element["rend"]
+            # type values: subtitle, motto
             if "type" in element.attrs:
                 type_value = element["type"]
                 element["class"] = type_value
+                if type_value == "subtitle":
+                    # as specified in Digital Publishing WAI-ARIA Module 1.1
+                    element["role"] = "doc-subtitle"
                 del element["type"]
     # transform <lb/>
     # in the transcriptions for the manuscript column, each line
