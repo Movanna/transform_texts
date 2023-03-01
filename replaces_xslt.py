@@ -38,6 +38,15 @@ def read_xml(filename):
         match_string = re.search(search_string, file_content)
         if match_string:
             file_content = edit_page_breaks(file_content)
+        # when there are several completely deleted lines of text
+        # or a deletion spanning a line break
+        # there may be files with one <del> per line of text,
+        # but it's ok to have a <del> spanning several lines
+        # so let's replace those chopped up <del>:s
+        # this makes the transformation of <add> containing <del> 
+        # work better later on
+        search_string = re.compile(r"</del><lb/>\n<del>")
+        file_content = search_string.sub("<lb/>\n", file_content)
         xml_soup = BeautifulSoup(file_content, "xml")
     print("We have old soup.")
     return xml_soup
@@ -524,6 +533,12 @@ def transform_tags(html_soup):
         for element in elements:
             element.name = "p"
             element["class"] = "signed"
+    # transform <del>
+    # the tag and its contents shouldn't be present in reading text
+    elements = html_soup.find_all("del")
+    if len(elements) > 0:
+        for element in elements:
+            element.decompose()
     # transform <add>, add describing tooltip
     elements = html_soup.find_all("add")
     if len(elements) > 0:
@@ -536,27 +551,26 @@ def transform_tags(html_soup):
             # highlight them in some way
             if "type" in element.attrs and element["type"] == "later":
                     element.decompose()
+            # if <add> is empty (due to it having contained only a <del>
+            # which at this point has been decomposed): get rid of this <add>
             elif "type" in element.attrs and element["type"] == "marginalia":
-                element.name = "span"
-                element["class"] = ["add"]
-                element["class"].append("marginalia")
-                element["class"].append("tooltiptrigger")
-                element["class"].append("ttMs")
-                del element["type"]
-                # insert explanatory text in tooltip span
-                explanatory_span = html_soup.new_tag("span")
-                explanatory_span["class"] = ["tooltip"]
-                explanatory_span["class"].append("ttMs")
-                explanatory_span.insert(0, "tillagt i marginalen")
-                element.insert_after(explanatory_span)
+                if len(element.contents) == 0: 
+                    element.decompose()
+                else:
+                    element.name = "span"
+                    element["class"] = ["add"]
+                    element["class"].append("marginalia")
+                    element["class"].append("tooltiptrigger")
+                    element["class"].append("ttMs")
+                    del element["type"]
+                    # insert explanatory text in tooltip span
+                    explanatory_span = html_soup.new_tag("span")
+                    explanatory_span["class"] = ["tooltip"]
+                    explanatory_span["class"].append("ttMs")
+                    explanatory_span.insert(0, "tillagt i marginalen")
+                    element.insert_after(explanatory_span)
             else:
                 element.unwrap()
-    # transform <del>
-    # the tag and its contents shouldn't be present in reading text
-    elements = html_soup.find_all("del")
-    if len(elements) > 0:
-        for element in elements:
-            element.decompose()
     # transform <gap>, add describing tooltip
     elements = html_soup.find_all("gap")
     if len(elements) > 0:
