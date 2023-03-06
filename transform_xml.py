@@ -243,6 +243,10 @@ def transform_xml(old_soup, abbr_dictionary):
                     hi.name = "foreign"
                 if value == "Emphasis":
                     del hi["rend"]
+                if value == "Lisätty_marginaaliin":
+                    del hi["rend"]
+                    hi["type"] = "marginalia"
+                    hi.name = "add"
             if "xml:space" in hi.attrs:
                 del hi["xml:space"]
             if "style" in hi.attrs:
