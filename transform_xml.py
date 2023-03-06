@@ -327,14 +327,11 @@ def transform_xml(old_soup, abbr_dictionary):
                     abbr_content = abbr_content.replace("</abbr>", "")
                     if abbr_content in abbr_dictionary.keys():
                         expan_content = abbr_dictionary[abbr_content]
-                    else:
-                        expan_content = None
-            if expan_content is not None:
-                # now get the <expan> to update
-                for child in choice.children:
-                    # only add content to an empty <expan>
-                    if child.name == "expan" and len(child.contents) == 0:
-                        child.insert(0, expan_content)
+                        # now get the <expan> to update
+                        for child in choice.children:
+                            # only add content to an empty <expan>
+                            if child.name == "expan" and len(child.contents) == 0:
+                                child.insert(0, expan_content)
     print("We have new soup.")
     return new_soup, false_l
 
