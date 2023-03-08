@@ -23,6 +23,11 @@ DOCUMENT_TYPE = "article"
 # surround them with the needed tags as well as
 # add the likely expansions
 CHECK_UNTAGGED_ABBREVIATIONS = True
+# if True: correct falsely inserted <p> elements
+# due to Transkribus often interpreting (shorter) 
+# lines of text as separate paragraphs, even though 
+# they aren't
+CORRECT_P = False
 
 # loop through xml source files in folder and append to list
 def get_source_file_paths():
@@ -493,6 +498,17 @@ def tidy_up_xml(xml_string, false_l, abbr_dictionary):
     # so let's replace those chopped up <del>:s
     search_string = re.compile(r"</del><lb/>\n<del>")
     xml_string = search_string.sub("<lb/>\n", xml_string)
+    if CORRECT_P is True:
+        # Transkribus changed its text regions algorithm
+        # and now "recognizes" <p>:s everywhere
+        # this is of no help to us, so we're better off 
+        # without these wrongly recognized <p>:s altogether
+        # we need the line breaks inserted though, so unwrap
+        # doesn't work, just ordinary replacement
+        search_string = re.compile(r"</p>\n<p>")
+        xml_string = search_string.sub("<lb/>\n", xml_string)
+        search_string = re.compile(r"(</p>\n)(<pb .+?/>)(\n<p>)")
+        xml_string = search_string.sub(r"<lb/>\n\2\n", xml_string)
     # " should be used only in elements, not in element contents
     # i.e. the text of the document should use ” (&#x201d;
     # Right Double Quotation Mark) as the character for quotation
