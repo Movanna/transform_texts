@@ -1,5 +1,5 @@
 # This script is used for gathering statistics about
-# all of the texts in this large edition.
+# all of the texts in this large digital edition.
 
 # Each language version of a text has a pre-made file
 # in the GitHub repository, containing a template.
@@ -7,10 +7,12 @@
 # The script measures the content length of each file
 # in the repo by counting the characters in the human-readable
 # text (the content of the tags) using Beautiful Soup.
+# The database of the edition contains lots of metadata
+# for each text.
 
-# The script combines the content length with data from
-# the database and outputs ordered CSV:s containing info
-# about each text.
+# The script combines the content length with data
+# from the database and outputs an Excel workbook containing
+# info about each text, presented in many different ways.
 
 # The data is organized into pivot tables by Pandas and the
 # different sheets are styled with openpyxl. This way I get
@@ -20,12 +22,12 @@
 # (i.e. letters, articles), how many images there are for 
 # each text or category, and which texts are still missing
 # from the repo (content length 0). This would otherwise be
-# hard to know, because there are thousands of texts and files
-# and the texts mainly exist only as XML. Editors can now easily
-# check which texts haven't yet been transcribed or translated
-# and how long a certain text would be were it to be printed, without
-# keeping lists themselves or updating a list each time they've
-# finished a text.
+# hard to know, because there are thousands of texts and 
+# tens of thousands of files, and the texts exist only as XML.
+# Editors can now easily check which texts haven't yet been 
+# transcribed or translated and how long a certain text would 
+# be were it to be printed, without keeping lists themselves or
+# updating a list each time they've finished a text.
 
 from pathlib import Path
 import psycopg2
@@ -483,8 +485,8 @@ def create_data_and_tables(file_list, collection_id):
 def main():
     # create a list of all files in a collection
     # then create spreadsheet data for the texts in
-    # each collection
-    # finally style the spreadsheet
+    # each collection, and create the Excel workbook
+    # finally style the spreadsheets
     for collection_id in COLLECTIONS:
         source_folder = SOURCE_FOLDER + str(collection_id)
         file_list = create_file_list(source_folder)
