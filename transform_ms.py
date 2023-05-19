@@ -243,11 +243,16 @@ def transform_tags(html_soup):
                 element["class"] = "bar"
             del element["type"]
     # transform <anchor>
-    # more is needed here!
     elements = html_soup.find_all("anchor")
     if len(elements) > 0:
         for element in elements:
             element.name = "a"
+            if "id" in element.attrs:
+                id_value = element["id"]
+                element["name"] = id_value
+                element["class"] = ["anchor"]
+                element["class"].append(id_value)
+                del element["id"]
     # transform <choice>
     elements = html_soup.find_all("choice")
     if len(elements) > 0:
@@ -298,7 +303,7 @@ def transform_tags(html_soup):
             # then there was no sibling <expan> to <abbr>
             # and there's no meaning to keep the <choice> tooltiptrigger
             # and no use for <abbr>, only for its contents
-            if element.parent.name == "span" and element.parent.attrs == {"class": ["tooltiptrigger"]}:
+            elif element.parent.name == "span" and element.parent.attrs == {"class": ["tooltiptrigger"]}:
                 element.parent.unwrap()
                 element.unwrap()
             # if there's no transformed parent <choice>,
@@ -384,10 +389,14 @@ def transform_tags(html_soup):
                 if element["type"] == "ext": 
                     element["class"].append("ref_external")
                 del element["type"]
+            # id is a link to another text on the site
+            # in XML given as collection_id + "_" + publication_id
             if "id" in element.attrs:
                 xref_id = element.get("id")
+                xref_id = xref_id.replace("_", " ")
                 element["href"] = xref_id
                 del element["id"]
+            # target is a link to an external website
             if "target" in element.attrs:
                 xref_id = element.get("target")
                 element["href"] = xref_id
@@ -536,15 +545,11 @@ def transform_tags(html_soup):
                     if len(notes) > 0:
                         transform_footnotes(notes, html_soup)
                 # files that only contain a template with an empty
-                # div should produce a message for the site
-                # explaining why there's no text in the column
+                # div should get their own div class
+                # this empty div will later on get transformed to an empty string 
                 elif len(element.get_text(strip = True)) == 0:
                     div_type_value = "empty"
                     element["class"] = div_type_value
-                    empty_content = html_soup.new_tag("p")
-                    empty_content["class"] = "noIndent"
-                    empty_content.append("Ingen transkription.")
-                    element.append(empty_content)
                 else:
                     transform_footnotes(notes, html_soup)                    
             # <div> should always have @type, otherwise I have
@@ -605,21 +610,33 @@ def transform_tags(html_soup):
         for element in elements:
             element.name = "div"
             element["class"] = "postscript"
-    html_string = str(html_soup)
-    # remove tabs
-    search_string = re.compile(r"\t")
-    html_string = search_string.sub("", html_string)
-    # remove lines consisting only of <br/> (and possibly whitespace)
-    search_string = re.compile(r"^ *(<br/>) *$", re.MULTILINE)
-    html_string = search_string.sub("", html_string)
-    # replace double/triple/etc. spaces
-    search_string = re.compile(r"\s{2,}")
-    html_string = search_string.sub(" ", html_string)
-    # content of element p shouldn't start/end with space
-    search_string = re.compile(r"(<p.*?>) ?")
-    html_string = search_string.sub(r"\1", html_string)
-    search_string = re.compile(r" (</p>)")
-    html_string = search_string.sub(r"\1", html_string)
+    # files with no text content, consisting of just an empty <div>,
+    # should return an empty string
+    # this will produce a message on the site, explaining that
+    # there's no text to show
+    element = html_soup.find("div")
+    if len(element) > 0 and element["class"] == "empty":
+            html_string = ""
+    # if there's no <div> at all in the file, this file's content
+    # is not according to the rules for this project and should be ignored
+    elif len(element) == 0:
+        html_string = ""
+    else:    
+        html_string = str(html_soup)
+        # remove tabs
+        search_string = re.compile(r"\t")
+        html_string = search_string.sub("", html_string)
+        # remove lines consisting only of <br/> (and possibly whitespace)
+        search_string = re.compile(r"^ *(<br/>) *$", re.MULTILINE)
+        html_string = search_string.sub("", html_string)
+        # replace double/triple/etc. spaces
+        search_string = re.compile(r"\s{2,}")
+        html_string = search_string.sub(" ", html_string)
+        # content of element p shouldn't start/end with space
+        search_string = re.compile(r"(<p.*?>) ?")
+        html_string = search_string.sub(r"\1", html_string)
+        search_string = re.compile(r" (</p>)")
+        html_string = search_string.sub(r"\1", html_string)
     print("We have new soup.")
     return html_string
 
