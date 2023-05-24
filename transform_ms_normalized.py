@@ -10,6 +10,11 @@ import copy
 
 SOURCE_FOLDER = "documents/xml"
 OUTPUT_FOLDER = "documents/html"
+# the script version used on the website gets the text language
+# value from the site, in this version we set it here
+# it only affects the @lang value for the top div
+# and the heading for the list of footnotes
+LANGUAGE = "fi"
 
 # loop through xml source files in folder and append to list
 def get_source_file_paths():
@@ -21,7 +26,7 @@ def get_source_file_paths():
 
 # read an xml file and return its content as a soup object
 def read_xml(filename):
-    with open (SOURCE_FOLDER + "/" + filename, "r", encoding="utf-8-sig") as source_file:
+    with open(SOURCE_FOLDER + "/" + filename, "r", encoding="utf-8-sig") as source_file:
         file_content = source_file.read()
         # check for hyphens + line breaks
         # if they are present, replace them
@@ -472,8 +477,12 @@ def transform_tags(html_soup):
             explanatory_span["class"].append("ttMs")
             explanatory_span.insert(0, "svårtytt")
             element.insert_after(explanatory_span)
-    # transform <div> and @type of divs to @class
+    # transform <div>
     # also handle footnotes <note> for each <div>
+    # first find the top <div> and add this text's language value to it
+    element = html_soup.find("div")
+    if "type" in element.attrs:
+        element["lang"] = LANGUAGE
     elements = html_soup.find_all("div")
     if len(elements) > 0:
         for element in elements:
@@ -678,8 +687,18 @@ def transform_footnotes(notes, html_soup):
                         tag.append(note_section)
                         break
                 # choose a heading for the list of notes
+                # depending on language
                 note_heading = html_soup.new_tag("p")
-                note_heading.string = "Noter"
+                if LANGUAGE == "sv":
+                    note_heading.string = "Noter"
+                elif LANGUAGE == "fi":
+                    note_heading.string = "Viitteet"
+                elif LANGUAGE == "fr" or LANGUAGE == "en":
+                    note_heading.string = "Notes"
+                elif LANGUAGE == "de":
+                    note_heading.string = "Noten"
+                else:
+                    note_heading.string = "– – – – – – –"
                 note_heading["class"] = "noIndent"
                 note_section.append(note_heading)
                 note_section.append("\n")

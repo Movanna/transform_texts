@@ -9,6 +9,11 @@ import copy
 
 SOURCE_FOLDER = "documents/xml"
 OUTPUT_FOLDER = "documents/html"
+# the script version used on the website gets the text language
+# value from the site, in this version we set it here
+# it only affects the @lang value for the top div
+# and the heading for the list of footnotes
+LANGUAGE = "fi"
 
 # loop through xml source files in folder and append to list
 def get_source_file_paths():
@@ -20,7 +25,7 @@ def get_source_file_paths():
 
 # read an xml file and return its content as a soup object
 def read_xml(filename):
-    with open (SOURCE_FOLDER + "/" + filename, "r", encoding="utf-8-sig") as source_file:
+    with open(SOURCE_FOLDER + "/" + filename, "r", encoding="utf-8-sig") as source_file:
         file_content = source_file.read()
         # check for hyphens + line breaks
         # if they are present, replace them
@@ -146,9 +151,11 @@ def transform_tags(html_soup):
     # <div> is transformed towards the end of this function
     # and not here, but we still need the div_type_value
     # of the first <div>, in order to transform <p> right
+    # also add this text's language value to the top <div>
     element = html_soup.find("div")
     if "type" in element.attrs:
         div_type_value = element["type"]
+        element["lang"] = LANGUAGE
     # transform <p> 
     elements = html_soup.find_all("p")
     if len(elements) > 0:
@@ -614,7 +621,7 @@ def transform_tags(html_soup):
             explanatory_span["class"].append("ttMs")
             explanatory_span.insert(0, "svårtytt")
             element.insert_after(explanatory_span)
-    # transform <div> and @type of divs to @class
+    # transform <div> and @type of divs
     # also handle footnotes <note> for each <div>
     elements = html_soup.find_all("div")
     if len(elements) > 0:
@@ -820,8 +827,13 @@ def transform_footnotes(notes, html_soup):
                         tag.append(note_section)
                         break
                 # choose a heading for the list of notes
+                # depending on language
+                # reading texts can only have either sv or fi
                 note_heading = html_soup.new_tag("p")
-                note_heading.string = "Noter"
+                if LANGUAGE == "sv":
+                    note_heading.string = "Noter"
+                else:
+                    note_heading.string = "Viitteet"
                 note_heading["class"] = "noIndent"
                 note_section.append(note_heading)
                 note_section.append("\n")
