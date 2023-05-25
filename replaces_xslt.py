@@ -461,13 +461,19 @@ def transform_tags(html_soup):
     elements = html_soup.find_all("persName")
     if len(elements) > 0:
         for element in elements:
-            element.name = "span"
-            element["class"] = ["person"]
-            element["class"].append("tooltiptrigger")
-            element["class"].append("ttPerson")
             if "corresp" in element.attrs:
-                element["data-id"] = element.get("corresp")
-                del element["corresp"]
+                corresp_value = element.get("corresp")
+                if corresp_value.isdigit():
+                    element["data-id"] = corresp_value
+                    element.name = "span"
+                    element["class"] = ["person"]
+                    element["class"].append("tooltiptrigger")
+                    element["class"].append("ttPerson")
+                    del element["corresp"]
+                else:
+                    element.unwrap()
+            else:
+                element.unwrap()
     # transform <supplied>, add describing tooltip
     elements = html_soup.find_all("supplied")
     if len(elements) > 0:
@@ -741,6 +747,12 @@ def transform_tags(html_soup):
     else:
         html_soup = prevent_empty_paragraphs(html_soup)
         html_string = str(html_soup)
+        # make <a/> into <a></a> since it's not one of the
+        # self-closing tags in html
+        # the lxml parser and BS seem to make all empty elements
+        # self-closing, with the trailing slash
+        search_string = re.compile(r"(<a class.*?name.*?)/>")
+        html_string = search_string.sub(r"\1></a>", html_string)
         # remove tabs
         search_string = re.compile(r"\t")
         html_string = search_string.sub("", html_string)

@@ -329,7 +329,19 @@ def transform_tags(html_soup):
     elements = html_soup.find_all("persName")
     if len(elements) > 0:
         for element in elements:
-            element.unwrap()
+            if "corresp" in element.attrs:
+                corresp_value = element.get("corresp")
+                if corresp_value.isdigit():
+                    element["data-id"] = corresp_value
+                    element.name = "span"
+                    element["class"] = ["person"]
+                    element["class"].append("tooltiptrigger")
+                    element["class"].append("ttPerson")
+                    del element["corresp"]
+                else:
+                    element.unwrap()
+            else:
+                element.unwrap()
     # transform <supplied>, add describing tooltip
     elements = html_soup.find_all("supplied")
     if len(elements) > 0:
@@ -541,34 +553,10 @@ def transform_tags(html_soup):
     editorial_notes = html_soup.find_all("note")
     if len(elements) > 0:
         for editorial_note in editorial_notes:
-            # editors' explanations have no attributes
-            # this is the tooltip transformation, we need two new tags
+            # editors' notes have no attributes
+            # do not show editors' notes in the manuscript columns
             if editorial_note.attrs == {}:
-                note_marker = html_soup.new_tag("img")
-                note_marker["class"] = ["tooltiptrigger"]
-                note_marker["class"].append("comment")
-                note_marker["class"].append("ttComment")
-                note_marker["src"] = "images/asterix.svg"
-                html_editorial_note = html_soup.new_tag("span")
-                html_editorial_note["class"] = ["tooltip"]
-                html_editorial_note["class"].append("ttComment")
-                html_editorial_note["class"].append("teiComment")
-                html_editorial_note["class"].append("noteText")
-                # we can't just use .get_text() for getting the note contents,
-                # because we need to preserve all the tags in the note text,
-                # such as <xref>
-                # by replacing <note> with the new html_editorial_note tag,
-                # we get the new span on its right place in the tree
-                # and can use it to get the other new tag in place
-                # but html_editorial_note has no content until we add the old
-                # content back (old note tag + its content saved in editorial_note_content)
-                # since we used the old tag just to conveniently keep all note
-                # contents together, we finally have to unwrap editorial_note_content,
-                # getting rid of that old tag
-                editorial_note_content = editorial_note.replace_with(html_editorial_note)
-                html_editorial_note.insert_before(note_marker)
-                html_editorial_note.insert(0, editorial_note_content)
-                editorial_note_content.unwrap()
+                editorial_note.decompose()
     # transform <opener>
     elements = html_soup.find_all("opener")
     if len(elements) > 0:
@@ -601,6 +589,12 @@ def transform_tags(html_soup):
     else:
         html_soup = prevent_empty_paragraphs(html_soup)
         html_string = str(html_soup)
+        # make <a/> into <a></a> since it's not one of the
+        # self-closing tags in html
+        # the lxml parser and BS seem to make all empty elements
+        # self-closing, with the trailing slash
+        search_string = re.compile(r"(<a class.*?name.*?)/>")
+        html_string = search_string.sub(r"\1></a>", html_string)
         # remove tabs
         search_string = re.compile(r"\t")
         html_string = search_string.sub("", html_string)
