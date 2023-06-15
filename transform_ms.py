@@ -665,6 +665,19 @@ def transform_footnotes(notes, html_soup):
             original_note = copy.copy(note)
             # this is the tooltip transformation, we need three new tags
             note_id = note.get("id")
+            # on the website it's possible to have a Swedish and a 
+            # Finnish text next to each other, but if their footnotes 
+            # have identical id:s the tooltips won't work as intended, 
+            # showing content in the wrong language if the user chooses
+            # a tooltip first in one text and then in the other
+            # therefore we need to change the id:s for notes in one of 
+            # the languages
+            if LANGUAGE == "fi":
+                note_nr = re.findall(r"\d+", note_id)
+                if len(note_nr) > 0:
+                    note_nr = int(note_nr[0])
+                    note_nr += 500
+                    note_id = "ftn" + str(note_nr)
             note_symbol = note.get("n")
             html_note = html_soup.new_tag("span")
             html_note["class"] = ["footnoteindicator"]
