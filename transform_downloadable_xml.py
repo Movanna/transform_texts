@@ -19,7 +19,6 @@
 import re
 import os
 from bs4 import BeautifulSoup
-import os
 
 db_usr = os.environ.get("")
 db_pass = os.environ.get("")
