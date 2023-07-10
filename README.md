@@ -1,7 +1,7 @@
 # transform_texts
 **Python scripts for transforming texts using Beautiful Soup: XML, HTML, EPUB. Also some automated Excel reporting of text statistics and data using Pandas and openpyxl.**
 
-**I work with texts.** Texts are often seen as uncomplicated: just characters, words and paragraphs in a text document. Everyone knows how to create a text, right? Just open Word and start writing. Then send the file to be published – and the fun begins.
+**I work with texts** (and [data](https://github.com/Movanna/database_population)). Texts are often seen as uncomplicated: just characters, words and paragraphs in a text document. Everyone knows how to create a text, right? Just open Word and start writing. Then send the file to be published – and the fun begins.
 
 Hardly surprising at this point, my view is that **texts, textual phenomena, books and text formats are rather complex**. A Word document can *look* just perfect, but still be a nightmare for someone who wants to publish the contents online. Wait, getting text from one place or format to another is as simple as anything, isn't it? Well, that's what developers always told me: ”But, clearly, the texts you wanted to appear on the site *are* all there now!”. Yeah, maybe (never be too sure, though), but they certainly looked bad. When the initial result is that the subtitle is larger than the title, the text is cramped, the font is ugly, the italics you were expecting have disappeared, footnotes are gone, and the indentation is all off, then maybe publishing texts isn't necessarily such an easy business.
 
