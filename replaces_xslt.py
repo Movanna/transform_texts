@@ -733,6 +733,17 @@ def transform_tags(html_soup):
         for element in elements:
             element.name = "div"
             element["class"] = "postscript"
+    # transform <table> by wrapping it in a specific <div>
+    # do this after the general div transformation in order to
+    # avoid this div being transformed twice, since it's not an
+    # xml <div> but an html <div> added only for the purpose of
+    # being able to style tables with a vertical scrollbar
+    elements = html_soup.find_all("table")
+    if len(elements) > 0:
+        for element in elements:
+            new_div = html_soup.new_tag("div")
+            new_div["class"] = "table-wrapper"
+            element.wrap(new_div)
     # files with no text content, consisting of just an empty <div>,
     # should return an empty string
     # this will produce a message on the site, explaining that
