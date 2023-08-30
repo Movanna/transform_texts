@@ -565,6 +565,11 @@ def transform_tags(html_soup):
     # transform <add>, add describing tooltip
     elements = html_soup.find_all("add")
     if len(elements) > 0:
+        # nested <add> elements may cause problems: 
+        # if the parent <add> is decomposed, the child <add> will be
+        # None, and can't be iterated over
+        # avoid this by decomposing after the iterations over elements
+        elements_to_decompose = []
         for element in elements:
             # @type="later" and its contents shouldn't be present
             # in reading text
@@ -573,12 +578,12 @@ def transform_tags(html_soup):
             # have a perfect place in the main text, so we might want to
             # highlight them in some way
             if "type" in element.attrs and element["type"] == "later":
-                    element.decompose()
+                 elements_to_decompose.append(element)
             # if <add> is empty (due to it having contained only a <del>
             # which at this point has been decomposed): get rid of this <add>
             elif "type" in element.attrs and element["type"] == "marginalia":
                 if len(element.contents) == 0: 
-                    element.decompose()
+                    elements_to_decompose.append(element)
                 else:
                     element.name = "span"
                     element["class"] = ["add"]
@@ -594,6 +599,8 @@ def transform_tags(html_soup):
                     element.insert_after(explanatory_span)
             else:
                 element.unwrap()
+        for element in elements_to_decompose:
+            element.decompose()
     # transform <gap>, add describing tooltip
     elements = html_soup.find_all("gap")
     if len(elements) > 0:
