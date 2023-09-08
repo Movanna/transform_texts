@@ -496,7 +496,10 @@ def tidy_up_xml(xml_string, false_l, abbr_dictionary):
     # exports from Transkribus contain one <del> per line,
     # but it's ok to have a <del> spanning several lines
     # so let's replace those chopped up <del>:s
+    # the same goes for <add>
     search_string = re.compile(r"</del><lb/>\n<del>")
+    xml_string = search_string.sub("<lb/>\n", xml_string)
+    search_string = re.compile(r"</add><lb/>\n<add>")
     xml_string = search_string.sub("<lb/>\n", xml_string)
     if CORRECT_P is True:
         # Transkribus changed its text regions algorithm
