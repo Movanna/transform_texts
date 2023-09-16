@@ -393,33 +393,50 @@ def transform_tags(html_soup):
     elements = html_soup.find_all("xref")
     if len(elements) > 0:
         for element in elements:
-            element.name = "a"
+            # the type attribute is required
             if "type" in element.attrs:
+                xref_type = element.get("type")
+                # we need a valid type value
+                if xref_type == "":
+                    element.unwrap()
+                    continue
+                element.name = "a"
                 element["class"] = ["xreference"]
                 # link to other texts on the site
-                if element["type"] == "introduction": 
+                if xref_type == "introduction": 
                     element["class"].append("ref_introduction")
-                if element["type"] == "readingtext": 
+                if xref_type == "readingtext": 
                     element["class"].append("ref_readingtext")
                 # nonexistant in platform?
-                if element["type"] == "manuscript": 
+                if xref_type == "manuscript": 
                     element["class"].append("ref_manuscript")
                 # link to external site
-                if element["type"] == "ext": 
+                if xref_type == "ext": 
                     element["class"].append("ref_external")
                 del element["type"]
-            # id is a link to another text on the site
-            # in XML given as collection_id + "_" + publication_id
-            if "id" in element.attrs:
-                xref_id = element.get("id")
-                xref_id = xref_id.replace("_", " ")
-                element["href"] = xref_id
-                del element["id"]
-            # target is a link to an external website
-            if "target" in element.attrs:
-                xref_id = element.get("target")
-                element["href"] = xref_id
-                del element["target"]
+                # target is a link to an external website
+                if "target" in element.attrs:
+                    xref_target = element.get("target")
+                    # we need an url
+                    if xref_target == "":
+                        element.unwrap()
+                        continue
+                    element["href"] = xref_target
+                    del element["target"]
+                # id is a link to another text on the site
+                # in XML given as collection_id + "_" + publication_id 
+                # (+ possibly "_" and a pos-value)
+                if "id" in element.attrs:
+                    xref_id = element.get("id")
+                    # we need an id value
+                    if xref_id == "":
+                        element.unwrap()
+                    else:
+                        xref_id = xref_id.replace("_", " ")
+                        element["href"] = xref_id
+                        del element["id"]
+            else:
+                element.unwrap()
     # transform <address>
     elements = html_soup.find_all("address")
     if len(elements) > 0:
