@@ -102,15 +102,21 @@ def transform_tags(html_soup):
     # transform <lb/>
     # in the transcriptions for the manuscript column, each line
     # of text is equivalent to the original manuscript's line
-    # and the lines within a <p> ends with <lb/>
+    # and the lines within a <p> ends with <lb/>, apart from
+    # the last line in the paragraph
     elements = html_soup.find_all("lb")
     if len(elements) > 0:
         for element in elements:
             # @break="yes" is for preserving a line break
-            # in the reading text
+            # in the reading text, unnecessary in transcriptions
             if "break" in element.attrs:
                 del element["break"]
-            element.name = "br"
+            # line breaks should only occur within other elements containing
+            # the document's text, and not on their own directly in the main <div>
+            if element.parent.name == "div":
+                element.decompose()
+            else:
+                element.name = "br"
     # transform <pb/> 
     elements = html_soup.find_all("pb")
     if len(elements) > 0:
