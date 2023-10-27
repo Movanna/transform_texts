@@ -1,20 +1,26 @@
-# The website features an option to download texts as xml.
-# This script thus transforms the project's original xml documents
-# into downloadable xml. 
-# The downloadable text type is "est" (reading text).
+# This script transforms the project's original xml documents
+# into xml for the download feature on the website.
+# The downloadable text types are "est" (established text/reading text)
+# and "ms" (manuscript/transcription).
+# This transformation works for both types
+# and produces an identical result in both cases.
 # The text can be downloaded either in Swedish or in Finnish,
 # and the metadata is translated accordingly before being 
 # inserted into the teiHeader element of the (to-be) xml file.
+# If the downloaded text is in another language than sv/fi, 
+# the metadata is in Swedish.
 
 # This is the script version for the website, so unlike the 
 # other transformation scripts in this repo, you can't use it 
 # directly as such, as this transformation gets called upon by
 # the corresponding API endpoint. But you can try out live examples on e.g.:
-# https://leomechelin.fi/api/leomechelin/text/downloadable/xml/1/594/est/sv
-# or
-# https://leomechelin.fi/api/leomechelin/text/downloadable/xml/1/594/est/fi
-# where the first number is the collection id, the second number is the text id,
-# and the last part of the url is the text language.
+# https://leomechelin.fi/api/leomechelin/text/downloadable/xml/1/594/est-i18n/sv
+# https://leomechelin.fi/api/leomechelin/text/downloadable/xml/1/594/est-i18n/fi
+# https://leomechelin.fi/api/leomechelin/text/downloadable/xml/2/3807/ms/5685
+# where, for est, the first number is the collection id, the second number is
+# the text id, and the last part of the url is the text language.
+# For ms, the first number is the collection id, the second number is
+# the text id, and the last number is the ms id.
 
 import re
 import os
@@ -150,189 +156,207 @@ def content_template():
 
 # get body from source xml and combine with template
 # go through certain elements, attributes and values
-# and transform them
-def transform_xml(old_soup, language, bibl_data):
+# add content to them and transform them
+def transform_xml(old_soup, language, bibl_data, est_or_ms):
     xml_body = old_soup.find("body")
     new_soup = content_template()
+    # transfer original xml body to template body
+    # and unwrap duplicated body element
     new_soup.body.append(xml_body)
     new_soup.body.unwrap()
-    # store the text's metadata in the teiHeader 
-    # in a way conforming to TEI as much as possible
-    if bibl_data is not None:
-        publication_title = bibl_data["publication_title"]
-        publication_subtitle = bibl_data["publication_subtitle"]
-        published_by = bibl_data["published_by"]
-        document_type = bibl_data["document_type"]
-        original_language = bibl_data["original_language"]
-        orig_lang_abbr = bibl_data["orig_lang_abbr"]
-        publication_date = bibl_data["publication_date"]
-        author = bibl_data["author"]
-        sender = bibl_data["sender"]
-        recipient = bibl_data["recipient"]
-        translations = bibl_data["translations"]
-        new_soup.teiHeader["xml:lang"] = language
-        new_soup.title.append(publication_title)
-        if publication_subtitle is not None:
-            new_tag = new_soup.new_tag("title")
-            new_soup.title.append("\n")
-            new_soup.title.insert_after(new_tag)
-            new_tag["type"] = "sub"
-            new_tag.append(publication_subtitle)
-            new_tag.insert_after("\n")
-        if translations != []:
-            for translation in translations:
-                translated_lang = translation["translated_into"]
-                if language == "sv":
-                    if "svenska" in translated_lang:
-                        new_tag = new_soup.new_tag("resp")
-                        new_soup.respStmt.append(new_tag)
-                        new_tag.append("översättning till svenska")
-                        new_tag.insert_after("\n")
-                        translators = translation["translators"]
-                        for translator in translators:
-                            new_tag = new_soup.new_tag("name")
-                            new_soup.respStmt.append(new_tag)
-                            new_tag.append(translator)
-                            new_tag.insert_after("\n")
-                        break
-                    else:
-                        continue
-                if language == "fi":
-                    if translated_lang == "suomeksi":
-                        new_tag = new_soup.new_tag("resp")
-                        new_soup.respStmt.append(new_tag)
-                        new_tag.append("suomentanut")
-                        new_tag.insert_after("\n")
-                        translators = translation["translators"]
-                        for translator in translators:
-                            new_tag = new_soup.new_tag("name")
-                            new_soup.respStmt.append(new_tag)
-                            new_tag.append(translator)
-                            new_tag.insert_after("\n")
-                        break
-                    else:
-                        continue
-        new_tag = new_soup.new_tag("bibl")
-        new_soup.sourceDesc.append(new_tag)
-        new_tag.append("\n")
-        if author != []:
-            for person in author:
-                new_tag = new_soup.new_tag("author")
-                new_soup.bibl.append(new_tag)
-                new_tag.append(person)
-                new_tag.insert_after("\n")
-        elif sender != []:
-            for person in sender:
-                new_tag = new_soup.new_tag("author")
-                new_soup.bibl.append(new_tag)
-                new_tag.append(person)
-                new_tag.insert_after("\n")
-        if recipient != []:
-            for person in recipient:
-                new_tag = new_soup.new_tag("recipient")
-                new_soup.bibl.append(new_tag)
-                new_tag.append(person)
-                new_tag.insert_after("\n")
-        if published_by is not None:
-                new_tag = new_soup.new_tag("publisher")
-                new_soup.bibl.append(new_tag)
-                new_tag.append(published_by)
-                new_tag.insert_after("\n")
-        new_tag = new_soup.new_tag("date")
-        new_soup.bibl.append(new_tag)
-        new_tag.append(publication_date)
-        new_tag.insert_after("\n")
-        new_tag = new_soup.new_tag("docType")
-        new_soup.bibl.append(new_tag)
-        new_tag.append(document_type)
-        new_tag.insert_after("\n")
-        new_tag = new_soup.new_tag("textLang")
-        new_soup.bibl.append(new_tag)
-        if language == "sv":
-            new_tag.append("Dokumentets originalspråk: ")
-        if language == "fi":
-            new_tag.append("Dokumentin alkuperäiskieli: ")
-        new_tag.append(original_language)
-        new_tag.insert_after("\n")
-        i = 0
-        for orig_lang in orig_lang_abbr:
-            if i == 0:
-                new_tag["mainLang"] = orig_lang
-                if len(orig_lang_abbr) == 1:
-                    break
-            if i == 1:
-                new_tag["otherLangs"] = orig_lang
-            if i > 1:
-                new_tag["otherLangs"] += " "
-                new_tag["otherLangs"] += orig_lang
-            i += 1
-    # we need the div_type_value of the first <div>
-    # in order to transform <p> right
-    # also, add this text's language value to the top <div>
-    element = new_soup.find("div")
-    if element is not None:
-        if "type" in element.attrs:
-            div_type_value = element["type"]
-        element["xml:lang"] = language
-    # transform <p> 
-    elements = new_soup.find_all("p")
-    if len(elements) > 0:
-        p_number = 0
-        for element in elements:
-            # no need to check for the following unless a letter
-            if div_type_value == "letter":
-            # first paragraph in a letter after the opener
-            # shouldn't be indented
-                if element.previous_sibling:
-                    if element.previous_sibling.name == "opener" or (element.previous_sibling.previous_sibling and element.previous_sibling.previous_sibling.name == "opener") and "rend" not in element.attrs:
-                        element["rend"] = ["noIndent"]
-                # first paragraph in a postscript shouldn't be indented
-                if element.parent.name == "postscript":
-                    if not element.previous_sibling or element.previous_sibling.name != "p" and "rend" not in element.attrs:
-                        element["rend"] = ["noIndent"]
-            if div_type_value == "misc" or div_type_value == "article" or div_type_value == "hansard":
-                # first paragraph in the document shouldn't be indented
-                if p_number == 0 and "rend" not in element.attrs:
-                    element["rend"] = ["noIndent"]
-            p_number += 1
-    # transform <lb/>
-    elements = new_soup.find_all("lb")
-    if len(elements) > 0:
-        for element in elements:
-            # @break="yes" means we really should have a line break
-            if "break" in element.attrs:
-                continue
-            # if <lb/> is followed by <pb/>, don't replace <lb/>
-            # with a space as below
-            # the edit_page_breaks function helps handling this space issue
-            elif element.next_sibling and element.next_sibling.name == "pb":
-                element.decompose()
-            # replace <lb/> (line break in a manuscript) with a space,
-            # since this is a reading text where the content of a <p>
-            # isn't divided into lines of text, as in the ms
-            # the reading text should be reflowable
-            else:
-                element.replace_with(" ")
-    # transform <pb/> so that all pb:s are uniform in terms of
-    # attribute + value for type of pb
-    elements = new_soup.find_all("pb")
-    if len(elements) > 0:
-        for element in elements:
-            if "type" not in element.attrs:
-                element["type"] = "orig"
+    # if there's no text content apart from the template:
+    # return an empty string
     body = new_soup.find("body")
     div = new_soup.find("div")
-    # if there is no text content in the source xml
-    # just return an empty string
     if len(body.get_text(strip = True)) == 0:
         xml_string = ""
+        return xml_string
     elif div is not None and len(div.get_text(strip = True)) == 0:
         xml_string = ""
+        return xml_string
     else:
+        if bibl_data is not None:
+            publication_id = bibl_data["id"]
+            manuscript_id = bibl_data["manuscript_id"]
+            publication_title = bibl_data["publication_title"]
+            publication_subtitle = bibl_data["publication_subtitle"]
+            published_by = bibl_data["published_by"]
+            document_type = bibl_data["document_type"]
+            original_language = bibl_data["original_language"]
+            orig_lang_abbr = bibl_data["orig_lang_abbr"]
+            publication_date = bibl_data["publication_date"]
+            publication_archive_info = bibl_data["publication_archive_info"]
+            author = bibl_data["author"]
+            sender = bibl_data["sender"]
+            recipient = bibl_data["recipient"]
+            translations = bibl_data["translations"]
+            new_soup.teiHeader["xml:lang"] = language
+            new_soup.title.append(publication_title)
+            if publication_subtitle is not None:
+                new_tag = new_soup.new_tag("title")
+                new_soup.title.insert_after(new_tag)
+                new_tag["type"] = "sub"
+                new_tag.append(publication_subtitle)
+            if translations != []:
+                for translation in translations:
+                    translated_lang = translation["translated_into"]
+                    if language == "sv":
+                        if "svenska" in translated_lang:
+                            new_tag = new_soup.new_tag("resp")
+                            new_soup.respStmt.append(new_tag)
+                            new_tag.append("översättning till svenska")
+                            translators = translation["translators"]
+                            for translator in translators:
+                                new_tag = new_soup.new_tag("name")
+                                new_soup.respStmt.append(new_tag)
+                                new_tag.append(translator)
+                            break
+                        else:
+                            continue
+                    if language == "fi":
+                        if translated_lang == "suomeksi":
+                            new_tag = new_soup.new_tag("resp")
+                            new_soup.respStmt.append(new_tag)
+                            new_tag.append("suomentanut")
+                            translators = translation["translators"]
+                            for translator in translators:
+                                new_tag = new_soup.new_tag("name")
+                                new_soup.respStmt.append(new_tag)
+                                new_tag.append(translator)
+                            break
+                        else:
+                            continue
+            new_tag = new_soup.new_tag("bibl")
+            new_soup.sourceDesc.append(new_tag)
+            if author != []:
+                for person in author:
+                    new_tag = new_soup.new_tag("author")
+                    new_soup.bibl.append(new_tag)
+                    new_tag.append(person)
+            elif sender != []:
+                for person in sender:
+                    new_tag = new_soup.new_tag("sender")
+                    new_soup.bibl.append(new_tag)
+                    new_tag.append(person)
+            if recipient != []:
+                for person in recipient:
+                    new_tag = new_soup.new_tag("recipient")
+                    new_soup.bibl.append(new_tag)
+                    new_tag.append(person)
+            if published_by is not None:
+                    new_tag = new_soup.new_tag("publisher")
+                    new_soup.bibl.append(new_tag)
+                    new_tag.append(published_by)
+            new_tag = new_soup.new_tag("date")
+            new_soup.bibl.append(new_tag)
+            new_tag.append(publication_date)
+            new_tag = new_soup.new_tag("archiveInfo")
+            new_soup.bibl.append(new_tag)
+            new_tag.append(publication_archive_info)
+            new_tag = new_soup.new_tag("docType")
+            new_soup.bibl.append(new_tag)
+            new_tag.append(document_type)
+            new_tag = new_soup.new_tag("textLang")
+            new_soup.bibl.append(new_tag)
+            if language == "sv":
+                new_tag.append("Dokumentets originalspråk: ")
+            if language == "fi":
+                new_tag.append("Dokumentin alkuperäinen kieli: ")
+            new_tag.append(original_language)
+            i = 0
+            for orig_lang in orig_lang_abbr:
+                if i == 0:
+                    new_tag["mainLang"] = orig_lang
+                    if len(orig_lang_abbr) == 1:
+                        break
+                if i == 1:
+                    new_tag["otherLangs"] = orig_lang
+                if i > 1:
+                    new_tag["otherLangs"] += " "
+                    new_tag["otherLangs"] += orig_lang
+                i += 1
+            new_tag = new_soup.new_tag("publicationId")
+            new_soup.bibl.append(new_tag)
+            new_tag.append(publication_id)
+            # if this text's language value is in orig_lang_abbr
+            # and its est_or_ms value is "est", then
+            # this text is both manuscript/transcription and established/reading text
+            # at the same time and in the same file:
+            # then we can add its manuscript_id
+            # if est_or_ms is "ms", then we know we should add manuscript_id 
+            # if this text's language value isn't in orig_lang_abbr
+            # and its est_or_ms value is "est",
+            # then there's a separate manuscript file (or no manuscript file at all)
+            # and we shouldn't connect that manuscript_id to this text
+            if est_or_ms == "ms" or (est_or_ms == "est" and language in orig_lang_abbr and manuscript_id is not None):
+                new_tag = new_soup.new_tag("manuscriptId")
+                new_soup.bibl.append(new_tag)
+                new_tag.append(str(manuscript_id))
+        # add this text's language value to the top <div>
+        element = new_soup.find("div")
+        if element is not None:
+            if est_or_ms == "est":
+                element["xml:lang"] = language
+            if est_or_ms == "ms":
+                element["xml:lang"] = original_language              
+        # transform <lb/>
+        elements = new_soup.find_all("lb")
+        if len(elements) > 0:
+            for element in elements:
+                # @break="yes" means we really should have a line break
+                if "break" in element.attrs:
+                    continue
+                # if <lb/> is followed by <pb/>, don't replace <lb/>
+                # with a space as below
+                # the edit_page_breaks function helps handling this space issue
+                elif element.next_sibling and element.next_sibling.name == "pb":
+                    element.decompose()
+                # replace <lb/> (an original line break in a manuscript)
+                # with a space, since this transformation produces an xml file
+                # which isn't divided into lines of text, as in the original
+                # transcript
+                else:
+                    element.replace_with(" ")
+        # transform <pb/> 
+        elements = new_soup.find_all("pb")
+        if len(elements) > 0:
+            for element in elements:
+                if "type" not in element.attrs:
+                    element["type"] = "orig"
         xml_string = str(new_soup)
+        return xml_string
+
+def tidy_up_xml(xml_string):
+    # this is what's left of the transcription line breaks
+    # replace them with just a space
+    search_string = re.compile(r"\s\n")
+    xml_string = search_string.sub(" ", xml_string)
+    # get rid of tabs, other newlines and extra spaces
+    search_string = re.compile(r"\n|\t")
+    xml_string = search_string.sub("", xml_string)
+    search_string = re.compile(r"\s{2,}")
+    xml_string = search_string.sub(" ", xml_string)
+    # add newlines as preferred
+    # for <TEI> and <teiHeader>:
+    search_string = re.compile(r"(<TEI>|<teiHeader.*?>|<fileDesc>|<titleStmt>|</title>|<respStmt>|</resp>|</name>|</respStmt>|</titleStmt>|<publicationStmt>|</publisher>|</publicationStmt>|<sourceDesc>|<bibl>|</author>|</sender>|</recipient>|</date>|</archiveInfo>|</docType>|</textLang>|</publicationId>|</manuscriptId>|</bibl>|</sourceDesc>|</fileDesc>|</teiHeader>|</TEI>)")
+    xml_string = search_string.sub(r"\1\n", xml_string)
+    search_string = re.compile(r"(<TEI>)")
+    xml_string = search_string.sub(r"\n\1", xml_string)
+    # for <text>, <body> and text dividing elements
+    search_string = re.compile(r"(<text>|</text>|<body.*?>|</body>|<div.*?>|</div>|</head>|</p>|<lg>|</lg>|</l>|<opener>|</opener>|<closer>|</closer>|<postscript>|</postscript>|</dateline>|</address>|</salute>|</signed>|<table>|</table>|</row>|<list>|</list>|</item>|<milestone.*?>|<pb.*?>(?=<))")
+    xml_string = search_string.sub(r"\1\n", xml_string)
+    # remove spaces at the beginning of lines
+    # (MULTILINE matches at the beginning of the string
+    # and at the beginning of each line)
+    search_string = re.compile(r"^ +<", re.MULTILINE)
+    xml_string = search_string.sub("<", xml_string)
+    # in case there are some chopped up <del>:s and <add>:s
+    search_string = re.compile(r"</del><del>|<add></add>")
+    xml_string = search_string.sub("", xml_string)
     return xml_string
 
-def transform(file, language, bibl_data):
+def transform(file, language, bibl_data, est_or_ms):
     old_soup = read_xml(file)
-    xml_string = transform_xml(old_soup, language, bibl_data)
+    xml_string = transform_xml(old_soup, language, bibl_data, est_or_ms)
+    xml_string = tidy_up_xml(xml_string)
     return xml_string
