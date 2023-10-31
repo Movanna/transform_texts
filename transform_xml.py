@@ -256,7 +256,11 @@ def transform_xml(old_soup, abbr_dictionary):
                 del hi["xml:space"]
             if "style" in hi.attrs:
                 value = hi["style"]
-                if value == "text-decoration: underline;":
+                match_string = re.search("super", value)
+                if match_string:
+                    hi["rend"] = "raised"
+                    del hi["style"]
+                elif value == "text-decoration: underline;":
                     del hi["style"]
                 else:
                     hi.unwrap()
