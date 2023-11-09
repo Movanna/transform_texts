@@ -31,10 +31,10 @@ This script goes through a list of abbreviations and their expansions and makes 
 I exported this match list from "Find in Files" in the Oxygen XML Editor and then cleaned it up with this script. Then I used Beautiful Soup to get the contents of the abbr and expan tags. The contents were then inserted into a dictionary.
 
 ## 2. Transform an EPUB to XML
-Google Book has digitized a lot of obscure 19th century books that are really hard to find anywhere else. Just what this project needs! However, the EPUBs are messy and the content is of course divided into many different files. In this project, each text consists of just one XML file. This script **gets the EPUB files in the right order, transforms the tags and outputs a single file of pretty XML**.
+Google Books has digitized a lot of obscure 19th century books that are really hard to find anywhere else. Just what this project needs! However, the EPUBs are messy and the content is of course divided into many different files. In this project, each text consists of just one XML file. This script **gets the EPUB files in the right order, transforms the tags and outputs a single file of pretty XML**.  Not for commercial use, please check copyright and licence conditions for each EPUB provider.
 
 ### 2. a) transform_epub.py
-This script transforms a Google Books EPUB into a single XML document, transforms the tags using Beautiful Soup and gets rid of unnecessary clutter and useless info. The string replacement is similar to the one in the previous script.
+This script transforms an EPUB into a single XML document, transforms the tags using Beautiful Soup and gets rid of unnecessary clutter and useless info. The string replacement is similar to the one in the previous script. 
 
 ## 3. Transform XML to HTML
 This project uses the [Generic Digital Edition Platform](https://github.com/slsfi/digital_edition_documentation/wiki), which includes a website. The platform is designed for **publishing TEI XML online**. This edition project publishes the works of the Finnish author and politician **Leo Mechelin** (1839–1914): [the digital archive Leo Mechelin – Pro lege](https://leomechelin.fi). The archive contains tens of thousands of texts, which are **published on the website and to some extent also as e-books and in print**. The main purpose of the project is to make historical texts and archive material accessible online by digitizing, transcribing and translating documents and by presenting them in a meaningful context.
