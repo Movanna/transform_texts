@@ -251,7 +251,7 @@ def transform_tags(html_soup):
             if element["type"] == "editorial":
                 element["class"] = "space"
             if element["type"] == "bar":
-                element["class"] = "bar"
+                element["class"] = "milestoneBar"
             del element["type"]
     # transform <anchor>
     elements = html_soup.find_all("anchor")

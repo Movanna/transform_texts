@@ -557,6 +557,15 @@ def tidy_up_xml(xml_string, false_l, abbr_dictionary):
     xml_string = xml_string.replace("\'", "’")
     xml_string = xml_string.replace("’’", "”")
     xml_string = xml_string.replace("´", "’")
+    # do not allow soft hyphen (&shy;), use only hyphen minus
+    # (or the not sign for hyphens that are to be transformed 
+    # differently later on for html and download xml on the site)
+    # first check for hyphen minus combined with soft 
+    # (and often invisible, depending on your text/code editor) hyphen,
+    # as these cases have appeared in the material
+    xml_string = xml_string.replace("-­", "-")
+    xml_string = xml_string.replace("­-", "-")
+    xml_string = xml_string.replace("­", "-")
     if CHECK_UNTAGGED_ABBREVIATIONS is True:
         xml_string = replace_untagged_abbreviations(xml_string, abbr_dictionary)
     print("XML tidied.")
