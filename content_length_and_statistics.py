@@ -215,8 +215,8 @@ def check_content(xml_soup):
     return content_length, pages
 
 # construct the url for each publication
-def construct_url(publication_id, COLLECTION_ID):
-    url = "https://digital_publishing_project/publication/" + str(COLLECTION_ID) + "/text/" + str(publication_id) + "/nochapter/not/infinite/nosong/searchtitle/established_sv&established_fi&facsimiles&manuscripts"
+def construct_url(publication_id, collection_id):
+    url = "https://digital_publishing_project/collection/" + str(collection_id) + "/text/" + str(publication_id)
     return url
 
 # make a list out of the values for each file

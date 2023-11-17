@@ -1,6 +1,6 @@
 # This script transforms the project's original xml documents
 # into xml for the download feature on the website.
-# The downloadable text types are "est" (established text/reading text)
+# The downloadable text types are "est" (reading text, the main edited text)
 # and "ms" (manuscript/transcription).
 # This transformation works for both types
 # and produces an identical result in both cases.
@@ -17,10 +17,10 @@
 # https://leomechelin.fi/api/leomechelin/text/downloadable/xml/1/594/est-i18n/sv
 # https://leomechelin.fi/api/leomechelin/text/downloadable/xml/1/594/est-i18n/fi
 # https://leomechelin.fi/api/leomechelin/text/downloadable/xml/2/3807/ms/5685
-# where, for est, the first number is the collection id, the second number is
-# the text id, and the last part of the url is the text language.
-# For ms, the first number is the collection id, the second number is
-# the text id, and the last number is the ms id.
+# where, for est (reading text), the first number is the collection id,
+# the second number is the text id, and the last part of the url is the text language.
+# For ms (manuscript/transcription), the first number is the collection id,
+# the second number is the text id, and the last number is the ms id.
 
 import re
 import os
@@ -65,7 +65,7 @@ def read_xml(filename):
 
 # hyphens followed by line breaks are not to be present
 # in the reading texts
-# they originate from the transcriptions for the manuscript column,
+# they originate from the transcriptions for the manuscript/transcription column,
 # where each line of text is equivalent to the original manuscript's
 # line, including its possible hyphens
 # a hyphen + <lb/> may or may not be followed by newlines and <pb/>-tags
@@ -291,7 +291,7 @@ def transform_xml(old_soup, language, bibl_data, est_or_ms):
             new_tag.append(publication_id)
             # if this text's language value is in orig_lang_abbr
             # and its est_or_ms value is "est", then
-            # this text is both manuscript/transcription and established/reading text
+            # this text is both manuscript/transcription and reading text
             # at the same time and in the same file:
             # then we can add its manuscript_id
             # if est_or_ms is "ms", then we know we should add manuscript_id 

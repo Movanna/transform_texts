@@ -7,22 +7,22 @@
 # low-quality scan, low-quality e-book),
 # such as:
 # Storfurstendömet Finlands grundlagar jemte bihang
-#
+
 # For the project I'm working in, this is a way of
 # being able to actually use that text and to enrich
 # it further and make it more accessible. The resulting
 # file will be used for non-commercial purposes only.
-#
+
 # This script should be run on an unzipped epub
 # (change the .epub to .zip and then unzip it).
-#
+
 # The way of getting the files of the epub
 # in the right order using the package file,
 # function list_xhtml_file_paths,
 # and the overall concept of working with epubs
 # in this way I have very gratefully borrowed from
 # Jonas Lillqvist (@jonaslil).
-# 
+
 # (The text content of an epub should be in xhtml files,
 # but these epub content files are .xml, even though
 # it's xhtml inside. If using this script on html, you

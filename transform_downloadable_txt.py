@@ -1,6 +1,6 @@
 # This script transforms the project's original xml documents
 # into txt for the download feature on the website.
-# The downloadable text types are "est" (established text/reading text)
+# The downloadable text types are "est" (reading text, the main edited text)
 # and "ms" (manuscript/transcription), and this script works for both types.
 
 import re
@@ -157,7 +157,7 @@ def transform_tags(html_soup, est_or_ms):
                 if element.name == "add":
                     if est_or_ms == "est":
                         # @type="later" and its contents shouldn't be present
-                        # in the established/read text,
+                        # in the reading text,
                         # since they've often been added by archive staff
                         # and not necessarily at the time the document was written
                         if "type" in element.attrs and element["type"] == "later":

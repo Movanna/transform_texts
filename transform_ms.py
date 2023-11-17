@@ -41,7 +41,7 @@ def read_xml(filename):
     print("We have old soup.")
     return xml_soup
 
-# in the transcriptions for the manuscript column,
+# in the transcriptions for the manuscript/transcription column,
 # each line of text is equivalent to the original manuscript's line,
 # including its possible hyphens
 # in the transcriptions, either hyphen minus or soft hyphen has been
@@ -98,7 +98,7 @@ def transform_tags(html_soup):
                     element["role"] = "doc-subtitle"
                 del element["type"]
     # transform <lb/>
-    # in the transcriptions for the manuscript column, each line
+    # in the transcriptions for the manuscript/transcription column, each line
     # of text is equivalent to the original manuscript's line
     # and the lines within a <p> ends with <lb/>, apart from
     # the last line in the paragraph
@@ -609,7 +609,7 @@ def transform_tags(html_soup):
     if len(elements) > 0:
         for editorial_note in editorial_notes:
             # editors' notes have no attributes
-            # do not show editors' notes in the manuscript columns
+            # do not show editors' notes in the manuscript/transcription column
             if editorial_note.attrs == {}:
                 editorial_note.decompose()
     # transform <opener>

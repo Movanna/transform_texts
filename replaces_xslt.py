@@ -1,5 +1,5 @@
 # This script transforms xml documents into html for the website.
-# Works only for text type "est" (reading text).
+# Works only for text type "est" (reading text, the main edited text).
 
 import re
 import os
@@ -58,7 +58,7 @@ def read_xml(filename):
 
 # hyphens followed by line breaks are not to be present
 # in the reading texts
-# they originate from the transcriptions for the manuscript column,
+# they originate from the transcriptions for the manuscript/transcription column,
 # where each line of text is equivalent to the original manuscript's
 # line, including its possible hyphens
 # a hyphen + <lb/> may or may not be followed by newlines and <pb/>-tags
@@ -222,7 +222,7 @@ def transform_tags(html_soup):
             # the edit_page_breaks function handled this space issue already
             elif element.next_sibling and element.next_sibling.name == "pb":
                 element.decompose()
-            # replace <lb/> (line break in a manuscript) with a space,
+            # replace <lb/> (line break in a transcription/manuscript) with a space,
             # since this is a reading text where the content of a <p>
             # isn't divided into lines of text, as in the ms
             else:
