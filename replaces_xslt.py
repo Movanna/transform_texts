@@ -112,14 +112,24 @@ def replace_hyphens(file_content):
     file_content = search_string.sub(r"\1–", file_content)
     return file_content
 
-# when newlines preceding <pb/> are removed and <pb/>-tags
-# followed by a newline and a word get a trailing space at this point,
+# when newlines preceding <pb/> are removed
+# and <pb/>-tags followed by a newline and a word or a certain element
+# get the newline replaced by a trailing space at this point,
 # the transformations of <lb/> and <pb/> work correctly later on
 def edit_page_breaks(file_content):
     search_string = re.compile(r"\n(<pb.*?/>)")
     file_content = search_string.sub(r"\1", file_content)
     search_string = re.compile(r"(<pb.*?/>)\n(\w)")
     file_content = search_string.sub(r"\1 \2", file_content)
+    # elements used within paragraph-like elements may be on a new line
+    # due to the transcription being divided into lines of text with <lb/>
+    # the <pb/> is always on its own line in this project's transcriptions
+    # when getting rid of the line breaks, this has to be taken into account
+    # as a page break is always to be followed (but not preceded) by a space
+    # unless the page breaks in the middle of a word
+    # (the latter case already handled by function replace_hyphens)
+    search_string = re.compile(r"(<pb.*?/>)\n(?=(<choice|<add|<del|<persName|<xref|<anchor|<hi|<foreign|<supplied|<unclear|<gap))")
+    file_content = search_string.sub(r"\1 ", file_content)
     return file_content
 
 def create_html_template():
@@ -217,7 +227,9 @@ def transform_tags(html_soup):
             # isn't divided into lines of text, as in the ms
             else:
                 element.replace_with(" ")
-    # transform <pb/> 
+    # transform <pb/>
+    # a possible trailing space was already handled by
+    # the edit_page_breaks function
     elements = html_soup.find_all("pb")
     if len(elements) > 0:
         for element in elements:
