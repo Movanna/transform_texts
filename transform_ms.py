@@ -717,6 +717,7 @@ def transform_footnotes(notes, html_soup):
             html_note["class"] = ["footnoteindicator"]
             html_note["class"].append("tooltiptrigger")
             html_note["class"].append("ttFoot")
+            html_note["tabindex"] = ["0"]
             html_note["data-id"] = note_id
             html_note.insert(0, note_symbol)
             note_outer_span = html_soup.new_tag("span")

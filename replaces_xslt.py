@@ -730,7 +730,8 @@ def transform_tags(html_soup):
                 note_marker["class"] = ["tooltiptrigger"]
                 note_marker["class"].append("comment")
                 note_marker["class"].append("ttComment")
-                note_marker["src"] = "images/asterix.svg"
+                note_marker["tabindex"] = ["0"]
+                note_marker["src"] = "images/asterisk.svg"
                 html_editorial_note = html_soup.new_tag("span")
                 html_editorial_note["class"] = ["tooltip"]
                 html_editorial_note["class"].append("ttComment")
@@ -862,6 +863,7 @@ def transform_footnotes(notes, html_soup):
             html_note["class"] = ["footnoteindicator"]
             html_note["class"].append("tooltiptrigger")
             html_note["class"].append("ttFoot")
+            html_note["tabindex"] = ["0"]
             html_note["data-id"] = note_id
             html_note.insert(0, note_symbol)
             note_outer_span = html_soup.new_tag("span")
