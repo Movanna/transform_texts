@@ -1,7 +1,7 @@
 # This script transforms xml documents into html for the website.
-# Works only for text type "ms normalized" (manuscripts/transcription)
-# i.e. without visible manuscript changes, just the end
-# result of the applied changes, such as all text tagged <del> gone.
+# Used for text type "ms" (manuscripts/transcription) as normalized,
+# i.e. without visible manuscript additions/deletions, just the end
+# result of the author's changes, such as all text tagged <del> gone.
 
 import re
 import os
@@ -157,25 +157,30 @@ def transform_tags(html_soup):
             line_break = html_soup.new_tag("br")
             element.insert_after(line_break)
     # transform <head>
+    # the platform provides <h1> and <h2> for each collection text page
+    # (i.e. each publication, or text with different adherent translations/transcriptions)
+    # <h1> contains the title of the text, automatically fetched from toc
+    # each column is an <article> with the column type (e.g. Transcription) as <h2>
+    # therefore the hierarchy of a text of type "ms" should always start with <h3>
     elements = html_soup.find_all("head")
     if len(elements) > 0:
         for element in elements:
             if "type" in element.attrs:
                 type_value = element["type"]
                 if type_value == "title":
-                    element.name = "h1"
+                    element.name = "h3"
                     element["class"] = "title"
                 if type_value == "section":
-                    element.name = "h2"
+                    element.name = "h4"
                     element["class"] = "section"
                 if type_value == "subchapter":
-                    element.name = "h3"
+                    element.name = "h5"
                     element["class"] = "sub"
                 if type_value == "subchapter2":
-                    element.name = "h4"
+                    element.name = "h6"
                     element["class"] = "sub2"
                 if type_value == "subchapter3":
-                    element.name = "h5"
+                    element.name = "h6"
                     element["class"] = "sub3"
                 del element["type"]
             # table headers should be <caption>
@@ -197,7 +202,7 @@ def transform_tags(html_soup):
                 continue
             # <head> without attribute: chapter heading
             else:
-                element.name = "h2"
+                element.name = "h4"
                 element["class"] = "chapter"
     # transform <cell> (in <row> in <table>)
     # also transform cells in a row with @role="label"
@@ -372,12 +377,13 @@ def transform_tags(html_soup):
                     explanatory_span.insert(0, "oläsligt")
                     element.insert(0, "[...]")
                     element.insert_after(explanatory_span)
-                # supplied with @type="editorial" is used when the editor
-                # wants to add e.g. a h1-level heading for a text that is
-                # missing the highest level of heading (describing the
+                # supplied with @type="editorial" is used (inside a <head>)
+                # when the editor wants to add a heading for a text that is
+                # missing the highest level of heading (the title describing the
                 # whole text); this kind of supplied is shown in the ms,
-                # because it's good practice for the html (otherwise no
-                # h1 would exist in the text, only lower levels of headings)
+                # because it's good practice for the html (otherwise there would be
+                # a gap in the h-hierarchy, if the highest heading is missing
+                # and the levels used are lower ones, like "chapter")
                 if element["type"] == "editorial":
                     element.name = "span"
                     element["class"] = ["choice"]
@@ -785,7 +791,7 @@ def prevent_empty_paragraphs(html_soup):
     # if the content of a heading <head> has been deleted
     # e.g. due to it having contained only <del> 
     # remove that empty heading
-    elements = html_soup.find_all(['h1', 'h2', 'h3', 'h4'])
+    elements = html_soup.find_all(["h3", "h4", "h5", "h6"])
     if len(elements) > 0:
         for element in elements:
             if len(element.get_text(strip = True)) == 0:

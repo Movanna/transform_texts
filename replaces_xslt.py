@@ -1,5 +1,6 @@
 # This script transforms xml documents into html for the website.
-# Works only for text type "est" (reading text, the main edited text).
+# Used for text type "est" (reading text, the main edited text)
+# as well as for title pages and introductions.
 
 import re
 import os
@@ -269,25 +270,47 @@ def transform_tags(html_soup):
             line_break = html_soup.new_tag("br")
             element.insert_after(line_break)
     # transform <head>
+    # the platform provides <h1> and <h2> for each collection text page
+    # (i.e. each publication, or text with different adherent translations/transcriptions)
+    # <h1> contains the title of the text, automatically fetched from toc
+    # each column is an <article> with the column type (e.g. Transcription) as <h2>
+    # therefore the hierarchy of a text of type "est" should always start with <h3>
+    # for title and introduction pages there are no pre-provided headings,
+    # so these text types should always start with <h1>
     elements = html_soup.find_all("head")
     if len(elements) > 0:
         for element in elements:
             if "type" in element.attrs:
                 type_value = element["type"]
                 if type_value == "title":
-                    element.name = "h1"
+                    if div_type_value != "title_page" and div_type_value != "introduction":
+                        element.name = "h3"
+                    else:
+                        element.name = "h1"
                     element["class"] = "title"
                 if type_value == "section":
-                    element.name = "h2"
+                    if div_type_value != "title_page" and div_type_value != "introduction":
+                        element.name = "h4"
+                    else:
+                        element.name = "h2"
                     element["class"] = "section"
                 if type_value == "subchapter":
-                    element.name = "h3"
+                    if div_type_value != "title_page" and div_type_value != "introduction":
+                        element.name = "h5"
+                    else:
+                        element.name = "h3"
                     element["class"] = "sub"
                 if type_value == "subchapter2":
-                    element.name = "h4"
+                    if div_type_value != "title_page" and div_type_value != "introduction":
+                        element.name = "h6"
+                    else:
+                        element.name = "h4"
                     element["class"] = "sub2"
                 if type_value == "subchapter3":
-                    element.name = "h5"
+                    if div_type_value != "title_page" and div_type_value != "introduction":
+                        element.name = "h6"
+                    else:
+                        element.name = "h5"
                     element["class"] = "sub3"
                 del element["type"]
             # table headers should be <caption>
@@ -309,7 +332,10 @@ def transform_tags(html_soup):
                 continue
             # <head> without attribute: chapter heading
             else:
-                element.name = "h2"
+                if div_type_value != "title_page" and div_type_value != "introduction":
+                    element.name = "h4"
+                else:
+                    element.name = "h2"
                 element["class"] = "chapter"
     # transform <cell> (in <row> in <table>)
     # also transform cells in a row with @role="label"
@@ -351,14 +377,14 @@ def transform_tags(html_soup):
                     element.name = "sup"
                 elif element["rend"] == "sub":
                     element.name = "sub"
-                elif element.parent.name == "h1" or element.parent.name == "h2" or element.parent.name == "h3" or element.parent.name == "h4":
+                elif element.parent.name == "h1" or element.parent.name == "h2" or element.parent.name == "h3" or element.parent.name == "h4" or element.parent.name == "h5" or element.parent.name == "h6":
                     element.unwrap()
                 else:
                     element["class"] = element["rend"]
                     element.name = "em"
                 del element["rend"]
             else:
-                if element.parent.name == "h1" or element.parent.name == "h2" or element.parent.name == "h3" or element.parent.name == "h4":
+                if element.parent.name == "h1" or element.parent.name == "h2" or element.parent.name == "h3" or element.parent.name == "h4" or element.parent.name == "h5" or element.parent.name == "h6":
                     element.unwrap()
                 else:
                     element.name = "i"
@@ -952,7 +978,7 @@ def prevent_empty_paragraphs(html_soup):
     # if the content of a heading <head> has been deleted
     # e.g. due to it having contained only <del> or <add type="later"> 
     # remove that empty heading
-    elements = html_soup.find_all(['h1', 'h2', 'h3', 'h4'])
+    elements = html_soup.find_all(["h3", "h4", "h5", "h6"])
     if len(elements) > 0:
         for element in elements:
             if len(element.get_text(strip = True)) == 0:
