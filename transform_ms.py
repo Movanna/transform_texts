@@ -403,8 +403,9 @@ def transform_tags(html_soup):
     elements = html_soup.find_all("xref")
     if len(elements) > 0:
         for element in elements:
-            # the type attribute is required
-            if "type" in element.attrs:
+            # the type attribute is required, and either id or target
+            # depending on the type of link
+            if "type" in element.attrs and ("id" in element.attrs or "target" in element.attrs):
                 xref_type = element.get("type")
                 # we need a valid type value
                 if xref_type == "":
@@ -413,38 +414,39 @@ def transform_tags(html_soup):
                 element.name = "a"
                 element["class"] = ["xreference"]
                 # link to other texts on the site
-                if xref_type == "introduction": 
-                    element["class"].append("ref_introduction")
-                if xref_type == "readingtext": 
-                    element["class"].append("ref_readingtext")
-                # nonexistant in platform?
-                if xref_type == "manuscript": 
-                    element["class"].append("ref_manuscript")
+                if (xref_type == "introduction" or xref_type == "readingtext") and "id" in element.attrs:
+                    # id means a link to another text on the site
+                    # in XML given as collection_id + "_" + publication_id 
+                    # (+ possibly "_" and a pos-value)
+                    xref_id = element.get("id")
+                    # we need an id value
+                    if xref_id == "":
+                        element.unwrap()
+                        continue
+                    else:
+                        xref_id = xref_id.replace("_", " ")
+                        element["href"] = xref_id
+                        del element["id"]
+                    if xref_type == "introduction":
+                        element["class"].append("ref_introduction")
+                    if xref_type == "readingtext": 
+                        element["class"].append("ref_readingtext")
+                    del element["type"]
                 # link to external site
-                if xref_type == "ext": 
-                    element["class"].append("ref_external")
-                del element["type"]
-                # target is a link to an external website
-                if "target" in element.attrs:
+                if xref_type == "ext" and "target" in element.attrs:
                     xref_target = element.get("target")
                     # we need an url
                     if xref_target == "":
                         element.unwrap()
                         continue
+                    element["class"].append("ref_external")
+                    del element["type"]
                     element["href"] = xref_target
                     del element["target"]
-                # id is a link to another text on the site
-                # in XML given as collection_id + "_" + publication_id 
-                # (+ possibly "_" and a pos-value)
-                if "id" in element.attrs:
-                    xref_id = element.get("id")
-                    # we need an id value
-                    if xref_id == "":
-                        element.unwrap()
-                    else:
-                        xref_id = xref_id.replace("_", " ")
-                        element["href"] = xref_id
-                        del element["id"]
+                # in case the type was paired with the wrong attribute (id/target)
+                # e.g. type="readingtext" and target=""
+                if not "href" in element.attrs:
+                    element.unwrap()
             else:
                 element.unwrap()
     # transform <address>
