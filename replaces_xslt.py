@@ -196,7 +196,11 @@ def transform_tags(html_soup):
             # type values: subtitle, motto
             if "type" in element.attrs:
                 type_value = element["type"]
-                element["class"] = type_value
+                element["class"] = [type_value]
+                # "tei" is a required class value in reading texts for these p:s
+                # otherwise some inherent styles won't work
+                if div_type_value != "title_page" and div_type_value != "introduction":
+                    element["class"].append("tei")
                 if type_value == "subtitle":
                     # as specified in Digital Publishing WAI-ARIA Module 1.1
                     element["role"] = "doc-subtitle"
@@ -283,35 +287,40 @@ def transform_tags(html_soup):
             if "type" in element.attrs:
                 type_value = element["type"]
                 if type_value == "title":
+                    element["class"] = ["title"]
                     if div_type_value != "title_page" and div_type_value != "introduction":
                         element.name = "h3"
+                        element["class"].append("tei")
                     else:
                         element.name = "h1"
-                    element["class"] = "title"
                 if type_value == "section":
+                    element["class"] = ["section"]
                     if div_type_value != "title_page" and div_type_value != "introduction":
                         element.name = "h4"
+                        element["class"].append("tei")
                     else:
                         element.name = "h2"
-                    element["class"] = "section"
                 if type_value == "subchapter":
+                    element["class"] = ["sub"]
                     if div_type_value != "title_page" and div_type_value != "introduction":
                         element.name = "h5"
+                        element["class"].append("tei")
                     else:
                         element.name = "h3"
-                    element["class"] = "sub"
                 if type_value == "subchapter2":
+                    element["class"] = ["sub2"]
                     if div_type_value != "title_page" and div_type_value != "introduction":
                         element.name = "h6"
+                        element["class"].append("tei")
                     else:
                         element.name = "h4"
-                    element["class"] = "sub2"
                 if type_value == "subchapter3":
+                    element["class"] = ["sub3"]
                     if div_type_value != "title_page" and div_type_value != "introduction":
                         element.name = "h6"
+                        element["class"].append("tei")
                     else:
                         element.name = "h5"
-                    element["class"] = "sub3"
                 del element["type"]
             # table headers should be <caption>
             elif element.parent.name == "table":
@@ -322,7 +331,8 @@ def transform_tags(html_soup):
             # but not as part of the <h> hierarchy
             elif element.parent.name == "list":
                 new_header = html_soup.new_tag("p")
-                new_header["class"] = "list_header"
+                new_header["class"] = ["list_header"]
+                new_header["class"].append("tei")
                 element.parent.insert_before(new_header)
                 list_header = element.extract()
                 new_header.insert(0, list_header)
@@ -332,11 +342,12 @@ def transform_tags(html_soup):
                 continue
             # <head> without attribute: chapter heading
             else:
+                element["class"] = ["chapter"]
                 if div_type_value != "title_page" and div_type_value != "introduction":
                     element.name = "h4"
+                    element["class"].append("tei")
                 else:
                     element.name = "h2"
-                element["class"] = "chapter"
     # transform <cell> (in <row> in <table>)
     # also transform cells in a row with @role="label"
     elements = html_soup.find_all("cell")
@@ -701,7 +712,8 @@ def transform_tags(html_soup):
                 if div_type_value == "chapter" or div_type_value == "section":
                     element.name = "section"
                 else:
-                    element["class"] = div_type_value
+                    element["class"] = [div_type_value]
+                    element["class"].append("tei")
                 del element["type"]
                 # these are subgroups to the hansard div
                 # for the transformation of <p> we need
@@ -785,19 +797,22 @@ def transform_tags(html_soup):
     if len(elements) > 0:
         for element in elements:
             element.name = "div"
-            element["class"] = "opener"
+            element["class"] = ["opener"]
+            element["class"].append("tei")
     # transform <closer>
     elements = html_soup.find_all("closer")
     if len(elements) > 0:
         for element in elements:
             element.name = "div"
-            element["class"] = "closer"
+            element["class"] = ["closer"]
+            element["class"].append("tei")
     # transform <postscript>
     elements = html_soup.find_all("postscript")
     if len(elements) > 0:
         for element in elements:
             element.name = "div"
-            element["class"] = "postscript"
+            element["class"] = ["postscript"]
+            element["class"].append("tei")
     # transform <table> by wrapping it in a specific <div>
     # do this after the general div transformation in order to
     # avoid this div being transformed twice, since it's not an
@@ -807,7 +822,8 @@ def transform_tags(html_soup):
     if len(elements) > 0:
         for element in elements:
             new_div = html_soup.new_tag("div")
-            new_div["class"] = "table-wrapper"
+            new_div["class"] = ["table-wrapper"]
+            new_div["class"].append("tei")
             element.wrap(new_div)
     # files with no text content, consisting of just an empty <div>,
     # should return an empty string
