@@ -23,12 +23,19 @@
 # <choice><orig>Docton</orig><corr>Doctor</corr></choice> or
 # <choice><orig>e. g.</orig><reg>e.g.</reg></choice>).
 
+# Once the dictionary has been created: if there are multiple
+# expansions for an abbreviation, these should be checked manually.
+# When that is done, use option UPDATE_DICTIONARY to tidy up
+# the existing dict and create the final product.
+
 import re
 from bs4 import BeautifulSoup
 import json
 
 SOURCE_FILE = "documents/abbr/match_list.xml"
 OUTPUT_FILE = "documents/expan/abbr_and_expan.xml"
+ABBR_DICTIONARY = "dictionaries/abbr_dictionary.json"
+UPDATE_DICTIONARY = False
 
 # read an xml file and return its content
 # either as a string or as as a soup object
@@ -99,11 +106,11 @@ def create_abbr_dictionary(abbr_soup, abbr_dict):
         # else: keep checking the expan, and if our expan
         # is a new one, add it to the dict
         # the same abbr may have several expans, e.g.
-        # B.C. = Before Christ or British Columbia
+        # B.C. = "Before Christ" or "British Columbia"
         # since abbr is the key, we have to add _1 etc. to it
         # in order to be able to record new expans for it
-        # I'll go through these multiple expans later
-        # and decide which expan I want the other script to use
+        # these multiple expans should be checked later
+        # in order to decide which of them to keep
         if abbr_content in abbr_dict.keys():
             expan = abbr_dict.get(abbr_content)
             if expan == expan_content:
@@ -140,18 +147,51 @@ def write_dict_to_file(dictionary, filename):
         output_file.write(json_dict)
         print("Dictionary written to file", filename)
 
+# get dictionary content from file
+def read_dict_from_file(filename):
+    with open(filename, encoding="utf-8-sig") as source_file:
+        json_content = json.load(source_file)
+        return json_content
+
+# remove entries containing underscore + a digit
+# they represent alternative expansions for an abbreviation
+# and were added when the dict was originally created
+# but if they have been checked there's no need to keep them
+# in the dictionary any longer
+def update_dictionary(dictionary_to_update):
+    max_digit = 4
+    for digit in range(1, max_digit + 1):
+            char_to_check = f"_{digit}"
+            keys_to_remove = [key for key in dictionary_to_update if char_to_check in key]
+            for key in keys_to_remove:
+                del dictionary_to_update[key]
+    # sort dict by key, ignore case
+    sorted_updated_dict = sorted(dictionary_to_update.items(), key = lambda item: item[0].casefold())
+    sorted_updated_dict = dict(sorted_updated_dict)
+    return sorted_updated_dict
+
 def main():
-    # read the match list
-    file_content = read_xml(SOURCE_FILE)
-    # find the abbreviations and their expansions
-    abbr_string = find_abbr_and_expan(file_content)
-    # save the abbr - expan pairs
-    write_to_file(abbr_string, OUTPUT_FILE)
-    # make the newly created file into a soup object
-    abbr_soup = read_xml(OUTPUT_FILE)
-    abbr_dict = {}
-    # create and sort the dictionary
-    sorted_abbr_dict = create_abbr_dictionary(abbr_soup, abbr_dict)
-    write_dict_to_file(sorted_abbr_dict, "dictionaries/abbr_dictionary.json")
+    # create a dictionary of abbreviations and expansions
+    # afterwards: go through alternative expansions manually
+    # and decide which of them to keep
+    if not UPDATE_DICTIONARY:
+        # read the match list
+        file_content = read_xml(SOURCE_FILE)
+        # find the abbreviations and their expansions
+        abbr_string = find_abbr_and_expan(file_content)
+        # save the abbr - expan pairs
+        write_to_file(abbr_string, OUTPUT_FILE)
+        # make the newly created file into a soup object
+        abbr_soup = read_xml(OUTPUT_FILE)
+        abbr_dict = {}
+        # create and sort the dictionary
+        sorted_abbr_dict = create_abbr_dictionary(abbr_soup, abbr_dict)
+        write_dict_to_file(sorted_abbr_dict, ABBR_DICTIONARY)
+    # tidy up and sort the dictionary anew once it's been manually checked
+    else:
+        dictionary_to_update = read_dict_from_file(ABBR_DICTIONARY)
+        # create and sort the new and updated dictionary
+        sorted_updated_dict = update_dictionary(dictionary_to_update)
+        write_dict_to_file(sorted_updated_dict, ABBR_DICTIONARY)
 
 main()
