@@ -30,7 +30,7 @@ This script goes through a list of abbreviations and their expansions and makes 
 ```
 I exported this match list from "Find in Files" in the Oxygen XML Editor and then cleaned it up with this script. Then I used Beautiful Soup to get the contents of the abbr and expan tags. The contents were then inserted into a dictionary.
 
-When creating the dictionary, in case there were alternative expansions found for an abbreviation they were added to the dictionary. These cases should be checked manually afterwards, in order to decide which of the expansions should be kept. Once that has been done, the script has an update option which deletes unwanted entries and creates a new, sorted dictionary: the finished product. 
+While constructing the dictionary, if alternative expansions were found for an abbreviation, they were included in the dictionary. Once these cases have been checked manually, the script provides an update option which removes unwanted entries and generates a new, sorted dictionary, resulting in the final product.  
 
 ## 2. Transform an EPUB to XML
 Google Books has digitized a lot of obscure 19th century books that are really hard to find anywhere else. Just what this project needs! However, the EPUBs are messy and the content is of course divided into many different files. In this project, each text consists of just one XML file. This script **gets the EPUB files in the right order, transforms the tags and outputs a single file of pretty XML**.  Not for commercial use, please check copyright and licence conditions for each EPUB provider.
