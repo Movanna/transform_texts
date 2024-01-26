@@ -578,7 +578,7 @@ def replace_untagged_abbreviations(xml_string, abbr_dictionary):
     # been encoded as abbrs, otherwise they probably aren't
     # abbrs but just ordinary words that can't be expanded
     # keep these words in this list
-    do_not_expand = ["afsigt", "allmän", "art", "des", "f.", "fr", "följ", "Följ", "för", "för.", "först", "först.", "G.", "gen", "H.", "hand.", "just", "L", "L.", "m", "M", "min", "min.", "mån", "ord", "ord.", "R", "R.", "regn", "regn.", "rest", "rest.", "s", "s.", "S", "t.", "tills", "upp", "upp.", "v.", "väg."]
+    do_not_expand = ["a.", "adress.", "af", "af.", "afsigt", "allmän", "angelägen", "angelägen.", "art", "B", "B.", "beslut", "beslut.", "bl.", "borg", "borg.", "c.", "d", "D", "D.", "dat", "del", "del.", "des", "E", "E.", "erkände", "f.", "f:", "F.", "fl.", "fr", "Fr", "Fr.", "följ", "Följ", "för", "för.", "föredrag", "förhand", "förhand.", "förord", "först", "först.", "G.", "ge", "ge.", "gen", "gifter", "gång.", "H", "H.", "hand.", "just", "Just", "k.", "K", "K.", "K. F", "K. F.", "kg", "kung", "Kung", "l", "L", "L.", "lämpligt", "lämpligt.", "m", "m.", "M", "M.", "Maj.", "med", "med.", "min", "min.", "mån", "n", "n.", "N", "N.", "nu", "nu.", "ord", "ord.", "period", "period.", "propos", "public", "R", "R.", "redo", "regn", "regn.", "rest", "rest.", "rörde", "s", "s.", "S", "S.", "sammans.", "säg", "Säg", "sigill", "St", "St.", "S<hi rend=\"raised\">t", "S<hi rend=\"raised\">t</hi> Petersburg", "system.", "t.", "tills", "Tills", "tur", "upp", "upp.", "utfärd", "utfärd.", "v.", "verk.", "väg.", "W", "W.", "öfver."]
     # these are all the recorded abbrs that we hav en expan for
     abbr_list = abbr_dictionary.keys()
     for abbreviation in abbr_list:
@@ -586,7 +586,7 @@ def replace_untagged_abbreviations(xml_string, abbr_dictionary):
             continue
         # prevent abbrs containing a dot from being treated as regex
         # otherwise e.g. abbr "Fr." matches "Fri" in the text
-        abbreviation_in_text = re.sub(r"\.", "\.", abbreviation)
+        abbreviation_in_text = re.escape(abbreviation)
         # by adding some sontext to the abbr we can specify 
         # what a word should look like and make sure that parts
         # of words or already tagged words don't get tagged 
